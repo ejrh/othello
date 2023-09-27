@@ -1,5 +1,5 @@
 use std::num::NonZeroUsize;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 use std::thread;
 use std::time::SystemTime;
 use rand::seq::SliceRandom;
@@ -40,7 +40,7 @@ fn simulate_one_game() -> Game {
 fn main() {
     println!("Othello");
 
-    let total_score = AtomicUsize::new(0);
+    let total_score = AtomicIsize::new(0);
     let games_run: AtomicUsize = AtomicUsize::new(0);
     const NUM_GAMES: usize = 100000;
     let t0 = SystemTime::now();
@@ -50,12 +50,12 @@ fn main() {
     thread::scope(|s| {
         for _ in 0..num_threads {
             s.spawn(|| {
-                let mut thread_total_score: usize = 0;
+                let mut thread_total_score: isize = 0;
                 for _ in 0..(NUM_GAMES / num_threads) {
                     let game = simulate_one_game();
                     let score = evaluate_immediate(&game);
                     // println!("Game: score={}\n{:?}", score, &game);
-                    thread_total_score += score as usize;
+                    thread_total_score += score as isize;
                 }
                 total_score.fetch_add(thread_total_score, Ordering::Relaxed);
                 games_run.fetch_add(NUM_GAMES / num_threads, Ordering::Relaxed);
