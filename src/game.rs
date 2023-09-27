@@ -11,8 +11,8 @@ pub enum Colour {
 }
 
 #[derive(Clone, Default)]
-struct Square {
-    piece: Option<Colour>
+pub(crate) struct Square {
+    pub(crate) piece: Option<Colour>
 }
 
 type Board = [[Square; BOARD_SIZE as usize]; BOARD_SIZE as usize];
@@ -20,7 +20,7 @@ type Board = [[Square; BOARD_SIZE as usize]; BOARD_SIZE as usize];
 #[derive(Clone)]
 pub struct Game {
     pub next_turn: Colour,
-    board: Board
+    pub(crate) board: Board
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
