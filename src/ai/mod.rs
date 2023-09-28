@@ -1,4 +1,10 @@
-use crate::game::{Colour, Game};
+mod immediate;
+mod random;
+
+use crate::game::{Colour, Game, Move};
+
+pub use immediate::ImmediateAI;
+pub use random::RandomAI;
 
 pub type Score = i32;
 
@@ -19,4 +25,8 @@ pub fn evaluate_immediate(game: &Game) -> Score {
     }
 
     score
+}
+
+pub trait AI {
+    fn choose_move(&self, game: &Game) -> Option<Move>;
 }

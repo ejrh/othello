@@ -3,41 +3,19 @@ use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 use std::thread;
 use std::time::SystemTime;
 
-use rand::seq::SliceRandom;
-
-use othello::ai::{evaluate_immediate, Score};
-use othello::game::{Colour, Game, Move};
+use othello::ai::{AI, evaluate_immediate, ImmediateAI, RandomAI};
+use othello::game::{Colour, Game};
 
 fn simulate_one_game() -> Game {
     let mut game = Game::new();
-
     // println!("Game: {:?}", &game);
 
-    loop {
-        let mut moves = game.valid_moves();
-        let mov = if game.next_turn == Colour::Black {
-            fn evaluate_move(game: &Game, mov: Move) -> Score {
-                let game2 = game.apply(mov);
-                evaluate_immediate(&game2)
-            }
+    let black_ai = ImmediateAI { };
+    let white_ai = RandomAI { };
 
-            let mut best_move = moves.next();
-            if best_move.is_some() {
-                let mut best_score = evaluate_move(&game, best_move.unwrap());
-                for m in moves {
-                    let new_score =  evaluate_move(&game, m);
-                    if new_score > best_score {
-                        best_score = new_score;
-                        best_move = Some(m);
-                    }
-                }
-            }
-            best_move
-        } else {
-            let moves = moves.collect::<Vec<_>>();
-            let m = moves.choose(&mut rand::thread_rng());
-            m.copied()
-        };
+    loop {
+        let mov = if game.next_turn == Colour::Black { black_ai.choose_move(&game) }
+            else { white_ai.choose_move(&game) };
 
         let Some(mov) = mov else {
             // println!("No more moves!");
