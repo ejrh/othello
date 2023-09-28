@@ -99,19 +99,8 @@ impl Game {
         false
     }
 
-    pub fn valid_moves(&self) -> Vec<Move> {
-        let mut moves = Vec::new();
-        for row in 0..BOARD_SIZE {
-            for col in 0..BOARD_SIZE {
-                let mov = Move {
-                    player: self.next_turn,
-                    row,
-                    col
-                };
-                if self.is_valid_move(mov) { moves.push(mov); }
-            }
-        }
-        moves
+    pub fn valid_moves(&self) -> ValidMoveIterator {
+        ValidMoveIterator::new(self)
     }
 
     fn flip(&mut self, player: Colour, row: Pos, col: Pos, dy: Pos, dx: Pos) {
@@ -135,8 +124,8 @@ impl Game {
         }
     }
 
-    pub fn apply(&self, mov: &Move) -> Self {
-        assert!(self.is_valid_move(*mov));
+    pub fn apply(&self, mov: Move) -> Self {
+        assert!(self.is_valid_move(mov));
         let mut newgame = (*self).clone();
         newgame.next_turn = self.next_turn.opponent();
 
@@ -163,6 +152,45 @@ impl Debug for Game {
             f.write_str("\n")?;
         }
         Ok(())
+    }
+}
+
+pub struct ValidMoveIterator<'a> {
+    game: &'a Game,
+    row: Pos,
+    col: Pos
+}
+
+impl<'a> ValidMoveIterator<'a> {
+    fn new(game: &'a Game) -> Self {
+        Self { game, row: 0, col: -1 }
+    }
+}
+
+impl<'a> Iterator for ValidMoveIterator<'a> {
+    type Item = Move;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            self.col += 1;
+            if self.col >= BOARD_SIZE {
+                self.col = 0;
+                self.row += 1;
+            }
+            if self.row >= BOARD_SIZE {
+                self.row = 0;
+                return None;
+            }
+
+            let mov = Move {
+                player: self.game.next_turn,
+                row: self.row,
+                col: self.col,
+            };
+            if self.game.is_valid_move(mov) {
+                return Some(mov);
+            }
+        }
     }
 }
 

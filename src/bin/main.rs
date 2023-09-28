@@ -2,6 +2,7 @@ use std::num::NonZeroUsize;
 use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 use std::thread;
 use std::time::SystemTime;
+
 use rand::seq::SliceRandom;
 
 use othello::ai::{evaluate_immediate, Score};
@@ -15,14 +16,27 @@ fn simulate_one_game() -> Game {
     loop {
         let mut moves = game.valid_moves();
         let mov = if game.next_turn == Colour::Black {
-            fn evaluate_move(game: &Game, mov: &Move) -> Score {
+            fn evaluate_move(game: &Game, mov: Move) -> Score {
                 let game2 = game.apply(mov);
-                -evaluate_immediate(&game2)
+                evaluate_immediate(&game2)
             }
-            moves.sort_by_cached_key(|m| evaluate_move(&game, m));
-            moves.get(0)
+
+            let mut best_move = moves.next();
+            if best_move.is_some() {
+                let mut best_score = evaluate_move(&game, best_move.unwrap());
+                for m in moves {
+                    let new_score =  evaluate_move(&game, m);
+                    if new_score > best_score {
+                        best_score = new_score;
+                        best_move = Some(m);
+                    }
+                }
+            }
+            best_move
         } else {
-            moves.choose(&mut rand::thread_rng())
+            let moves = moves.collect::<Vec<_>>();
+            let m = moves.choose(&mut rand::thread_rng());
+            m.copied()
         };
 
         let Some(mov) = mov else {
