@@ -32,13 +32,13 @@ fn test_debug() {
 fn test_initial_moves() {
     let game = Game::new();
 
-    let moves = game.valid_moves();
-    assert_eq!(4, moves.len());
+    let mut moves = game.valid_moves();
 
-    assert_eq!(Move { player: Colour::Black, row: 2, col: 4 }, moves[0]);
-    assert_eq!(Move { player: Colour::Black, row: 3, col: 5 }, moves[1]);
-    assert_eq!(Move { player: Colour::Black, row: 4, col: 2 }, moves[2]);
-    assert_eq!(Move { player: Colour::Black, row: 5, col: 3 }, moves[3]);
+    assert_eq!(Some(Move { player: Colour::Black, row: 2, col: 4 }), moves.next());
+    assert_eq!(Some(Move { player: Colour::Black, row: 3, col: 5 }), moves.next());
+    assert_eq!(Some(Move { player: Colour::Black, row: 4, col: 2 }), moves.next());
+    assert_eq!(Some(Move { player: Colour::Black, row: 5, col: 3 }), moves.next());
+    assert_eq!(None, moves.next());
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn test_apply_move() {
         col: 4,
     };
 
-    let game2 = game.apply(&mov);
+    let game2 = game.apply(mov);
     assert_eq!(Colour::White, game2.next_turn);
 
     let mut str = String::new();
