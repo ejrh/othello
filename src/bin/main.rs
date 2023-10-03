@@ -45,7 +45,7 @@ fn main() {
                 let mut thread_total_score: isize = 0;
                 for _ in 0..(NUM_GAMES / num_threads) {
                     let game = simulate_one_game();
-                    let score = evaluate_immediate(&game);
+                    let score = evaluate_immediate(&game, Colour::Black);
                     // println!("Game: score={}\n{:?}", score, &game);
                     thread_total_score += score as isize;
                 }
