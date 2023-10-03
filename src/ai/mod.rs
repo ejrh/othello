@@ -1,9 +1,11 @@
 mod immediate;
+mod minimax;
 mod random;
 
 use crate::game::{Colour, Game, Move};
 
 pub use immediate::ImmediateAI;
+pub use minimax::MinimaxAI;
 pub use random::RandomAI;
 
 pub type Score = i32;

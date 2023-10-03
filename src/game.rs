@@ -46,7 +46,7 @@ fn out_of_range(row: Pos, col: Pos) -> bool {
 }
 
 impl Colour {
-    fn opponent(self) -> Self {
+    pub(crate) fn opponent(self) -> Self {
         match self {
             Self::Black => Self::White,
             Self::White => Self::Black
