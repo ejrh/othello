@@ -38,6 +38,6 @@ where F: Fn(&Game, Move) -> Score {
     game.valid_moves().max_by_key(|m| evaluate_move(game, *m))
 }
 
-pub trait AI {
+pub trait AI: Clone + Send {
     fn choose_move(&self, game: &Game) -> Option<Move>;
 }

@@ -3,6 +3,7 @@ use rand::seq::SliceRandom;
 use crate::ai::AI;
 use crate::game::{Game, Move};
 
+#[derive(Clone)]
 pub struct RandomAI {
 }
 

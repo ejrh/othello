@@ -1,6 +1,7 @@
 use crate::ai::{AI, evaluate_immediate, pick_best_move, Score};
 use crate::game::{Colour, Game, Move};
 
+#[derive(Clone)]
 pub struct MinimaxAI {
     pub max_depth: usize,
 }
