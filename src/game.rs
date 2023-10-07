@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Formatter};
 use crate::ai::Score;
+use crate::game::GameParseError::{InvalidPiece, TooManyColumns, TooManyRows};
 
 type Pos = i8;
 
@@ -11,14 +12,14 @@ pub enum Colour {
     White
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq)]
 pub(crate) struct Square {
     pub(crate) piece: Option<Colour>
 }
 
 type Board = [[Square; BOARD_SIZE as usize]; BOARD_SIZE as usize];
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Game {
     pub next_turn: Colour,
     pub(crate) board: Board
@@ -69,6 +70,14 @@ impl Game {
         board[3][4].piece = Some(Colour::White);
         board[4][3].piece = Some(Colour::White);
         board[4][4].piece = Some(Colour::Black);
+        Game {
+            next_turn: Colour::Black,
+            board
+        }
+    }
+
+    pub fn empty() -> Game {
+        let board: Board = Default::default();
         Game {
             next_turn: Colour::Black,
             board
@@ -164,6 +173,38 @@ impl Debug for Game {
             f.write_str("\n")?;
         }
         Ok(())
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum GameParseError {
+    TooManyRows,
+    TooManyColumns,
+    InvalidPiece,
+}
+
+impl TryFrom<&str> for Game {
+    type Error = GameParseError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let mut game = Game::empty();
+
+        for (i, line) in value.split_terminator('\n').enumerate() {
+            for (j, ch) in line.chars().enumerate() {
+                let piece = match ch {
+                    '○' => Some(Colour::Black),
+                    '●' => Some(Colour::White),
+                    '·' => None,
+                    _ => return Err(InvalidPiece)
+                };
+
+                let r = game.board.get_mut(i).ok_or(TooManyRows)?;
+                let sq = r.get_mut(j).ok_or(TooManyColumns)?;
+                *sq = Square { piece};
+            }
+        }
+
+        Ok(game)
     }
 }
 
