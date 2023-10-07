@@ -17,19 +17,13 @@ pub type Score = i32;
  * Currently, the evaluation is simply the count of friendly pieces minus the count of enemy pieces.
  */
 pub fn evaluate_immediate(game: &Game, player: Colour) -> Score {
-    let mut score = 0;
+    let score: Score = game.board.iter()
+        .flat_map(|r| r.iter()
+            .flat_map(|sq| sq.piece
+                .map(|c| c.sign())))
+        .sum();
 
-    for row in &game.board {
-        for square in row {
-            let Some(colour) = square.piece
-            else { continue; };
-
-            let val = if colour == player { 1 } else { -1 };
-            score += val;
-        }
-    }
-
-    score
+    score * player.sign()
 }
 
 /**
@@ -40,19 +34,8 @@ pub fn evaluate_immediate(game: &Game, player: Colour) -> Score {
  */
 pub fn pick_best_move<F>(game: &Game, evaluate_move: F) -> Option<Move>
 where F: Fn(&Game, Move) -> Score {
-    let mut moves = game.valid_moves();
-    let mut best_move = moves.next();
-    if best_move.is_some() {
-        let mut best_score = evaluate_move(game, best_move.unwrap());
-        for m in moves {
-            let new_score =  evaluate_move(game, m);
-            if new_score > best_score {
-                best_score = new_score;
-                best_move = Some(m);
-            }
-        }
-    }
-    best_move
+    // TODO - don't bother to call the evaluate_move function if there is only one move available
+    game.valid_moves().max_by_key(|m| evaluate_move(game, *m))
 }
 
 pub trait AI {

@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Formatter};
+use crate::ai::Score;
 
 type Pos = i8;
 
@@ -52,6 +53,13 @@ impl Colour {
             Self::White => Self::Black
         }
     }
+
+    pub(crate) fn sign(self) -> Score {
+        match self {
+            Self::Black => 1,
+            Self::White => -1
+        }
+    }
 }
 
 impl Game {
@@ -71,6 +79,7 @@ impl Game {
         self.board[row as usize][col as usize].piece
     }
 
+    #[inline(always)]
     fn count(&self, player: Colour, row: Pos, col: Pos, dy: Pos, dx: Pos) -> usize {
         let mut count = 0;
         let mut iter = (dy, dx).iterate_from(row, col);
@@ -86,17 +95,15 @@ impl Game {
         count
     }
 
+    #[inline(always)]
     pub(crate) fn is_valid_move(&self, mov: Move) -> bool {
         if mov.player != self.next_turn { return false; }
         if self.board[mov.row as usize][mov.col as usize].piece.is_some() { return false; }
 
-        for (dy, dx) in DIRECTIONS {
-            if self.count(mov.player, mov.row, mov.col, *dy, *dx) > 0 {
-                return true;
-            }
-        }
-
-        false
+        //TODO - this is one of the hottest loops in the whole program, so anything that might
+        // speed it up (*cough* bitboards) is worth looking into
+        DIRECTIONS.iter()
+            .any(|(dy, dx)| self.count(mov.player, mov.row, mov.col, *dy, *dx) > 0)
     }
 
     pub fn valid_moves(&self) -> ValidMoveIterator {
@@ -129,9 +136,8 @@ impl Game {
         let mut newgame = (*self).clone();
         newgame.next_turn = self.next_turn.opponent();
 
-        for (dy, dx) in DIRECTIONS {
-            newgame.flip(mov.player, mov.row, mov.col, *dy, *dx);
-        }
+        DIRECTIONS.iter()
+            .for_each(|(dy, dx)| newgame.flip(mov.player, mov.row, mov.col, *dy, *dx));
 
         newgame.board[mov.row as usize][mov.col as usize].piece = Some(mov.player);
 
