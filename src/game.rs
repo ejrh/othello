@@ -145,6 +145,12 @@ impl Game {
     }
 }
 
+impl Default for Game {
+    fn default() -> Self {
+        Game::new()
+    }
+}
+
 impl Debug for Game {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for row in &self.board {
