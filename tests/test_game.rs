@@ -97,3 +97,11 @@ fn test_apply_move() {
         ···●○···\n\
         ········\n········\n········\n", str);
 }
+
+#[test]
+fn test_no_moves() {
+    let game: Game = "○●●●●●●●\n".try_into().unwrap();
+
+    let mut moves = game.valid_moves();
+    assert_eq!(None, moves.next());
+}
