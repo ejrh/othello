@@ -1,3 +1,4 @@
+use std::cmp::min;
 use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 use std::thread;
 use std::time::SystemTime;
@@ -39,13 +40,27 @@ fn simulate_many_games_in_parallel(black_ai: &impl AI, white_ai: &impl AI, num_g
     let total_score = AtomicIsize::new(0);
     let games_run: AtomicUsize = AtomicUsize::new(0);
 
+    fn make_chunks(mut total: usize, num_chunks: usize) -> Vec<usize> {
+        let mut chunks = Vec::new();
+        let mut chunk_size = total / num_chunks;
+        if chunk_size * num_chunks < total { chunk_size += 1 }
+        while total >= 1 {
+            let size = min(chunk_size, total);
+            total -= size;
+            chunks.push(size);
+        }
+        chunks
+    }
+
     thread::scope(|s| {
-        for _ in 0..num_threads {
+        for games_per_thread in make_chunks(num_games, num_threads) {
+            // Make copies of the shared objects to move into this thread's closure
             let black_ai = black_ai.clone();
             let white_ai = white_ai.clone();
-            s.spawn(|| {
-                let games_per_thread = num_games.div_ceil(num_threads);
-                let (black_ai, white_ai) = (black_ai, white_ai);
+            let total_score = &total_score;
+            let games_run = &games_run;
+
+            s.spawn(move || {
                 let thread_score = simulate_many_games(&black_ai, &white_ai, games_per_thread);
                 total_score.fetch_add(thread_score, Ordering::Relaxed);
                 games_run.fetch_add(games_per_thread, Ordering::Relaxed);
