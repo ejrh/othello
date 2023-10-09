@@ -152,6 +152,19 @@ impl Game {
 
         newgame
     }
+
+    pub fn scores(&self) -> (Score, Score) {
+        let (mut black_score, mut white_score) = (0, 0);
+        self.board.iter()
+            .flat_map(|r| r.iter().flat_map(|sq| sq.piece))
+            .for_each(|c| {
+                match c {
+                    Colour::Black => black_score += 1,
+                    Colour::White => white_score += 1
+                }
+            });
+        (black_score, white_score)
+    }
 }
 
 impl Default for Game {
