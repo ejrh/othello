@@ -16,7 +16,7 @@ impl AI for MinimaxAI {
 
 }
 
-fn evaluate_to_depth(game: &Game, player: Colour, depth: usize) -> Score {
+pub fn evaluate_to_depth(game: &Game, player: Colour, depth: usize) -> Score {
     if depth == 0 {
         evaluate_immediate(game, player)
     } else {
@@ -24,7 +24,7 @@ fn evaluate_to_depth(game: &Game, player: Colour, depth: usize) -> Score {
         let opponent = player.opponent();
         let best_score = game.valid_moves()
             .map(|m| game.apply(m))
-            .map(|g| -evaluate_to_depth(&g, opponent, depth - 1)).max();
+            .map(|g| -evaluate_to_depth(&g, opponent, depth - 1)).min();
 
         best_score.unwrap_or_else(|| evaluate_immediate(game, player))
     }

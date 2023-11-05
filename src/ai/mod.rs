@@ -1,5 +1,5 @@
 mod immediate;
-mod minimax;
+pub mod minimax;
 mod random;
 
 use crate::game::{Colour, Game, Move};
