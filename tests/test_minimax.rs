@@ -1,6 +1,6 @@
 use othello::ai::minimax::evaluate_to_depth;
-use othello::ai::{evaluate_immediate, Score};
-use othello::game::{Colour, Game};
+use othello::ai::evaluate_immediate;
+use othello::game::{Colour, Game, Score};
 
 #[test]
 fn test_depth_0() {
@@ -25,7 +25,7 @@ fn test_depth_1() {
     fn estimate_game(game: &Game) -> Score {
         let mut best_score = Score::MAX;
         let mut best_move = None;
-        for mov in game.valid_moves() {
+        for mov in game.valid_moves(game.next_turn) {
             let game2 = game.apply(mov);
             let score = evaluate_immediate(&game2, Colour::Black);
             println!("{mov:?} yields score {score} with game\n{game2:?}");

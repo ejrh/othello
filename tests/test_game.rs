@@ -4,7 +4,7 @@ use othello::game::{Colour, Game, Move};
 
 #[test]
 fn test_initial_layout() {
-    let game = Game::new();
+    let game: Game = Game::new();
 
     assert_eq!(None, game.get_piece(0, 0));
     assert_eq!(Some(Colour::Black), game.get_piece(3, 3));
@@ -17,7 +17,7 @@ fn test_initial_layout() {
 
 #[test]
 fn test_debug() {
-    let game = Game::new();
+    let game: Game = Game::new();
 
     let mut str = String::new();
     write!(&mut str, "{:?}", game).unwrap();
@@ -64,9 +64,9 @@ fn test_from_bad_string() {
 
 #[test]
 fn test_initial_moves() {
-    let game = Game::new();
+    let game: Game = Game::new();
 
-    let mut moves = game.valid_moves();
+    let mut moves = game.valid_moves(Colour::Black).into_iter();
 
     assert_eq!(Some(Move { player: Colour::Black, row: 2, col: 4 }), moves.next());
     assert_eq!(Some(Move { player: Colour::Black, row: 3, col: 5 }), moves.next());
@@ -77,7 +77,7 @@ fn test_initial_moves() {
 
 #[test]
 fn test_apply_move() {
-    let game = Game::new();
+    let game: Game = Game::new();
 
     let mov = Move {
         player: Colour::Black,
@@ -102,6 +102,6 @@ fn test_apply_move() {
 fn test_no_moves() {
     let game: Game = "○●●●●●●●\n".try_into().unwrap();
 
-    let mut moves = game.valid_moves();
+    let mut moves = game.valid_moves(Colour::Black).into_iter();
     assert_eq!(None, moves.next());
 }

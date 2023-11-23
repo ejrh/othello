@@ -1,4 +1,5 @@
 use rand::prelude::SliceRandom;
+use othello::game::default::DefaultBoard;
 
 use othello::game::Game;
 
@@ -7,10 +8,10 @@ fn run_one_game() -> (usize, usize, usize, Option<Game>) {
     let mut total_moves = 0;
     let mut max_moves = 0;
     let mut max_moves_game = None;
-    let mut game = Game::new();
+    let mut game: Game<DefaultBoard> = Game::new();
 
     loop {
-        let moves: Vec<_> = game.valid_moves().collect();
+        let moves: Vec<_> = game.valid_moves(game.next_turn).into_iter().collect();
         if moves.is_empty() { break }
 
         let num = moves.len();
@@ -30,7 +31,7 @@ fn run_one_game() -> (usize, usize, usize, Option<Game>) {
 
 fn main() {
     let mut total_max_moves = 0;
-    let mut total_max_moves_game = None;
+    let mut total_max_moves_game;
     for game_no in 0..1000000 {
         let (_turns, _total_moves, max_moves, max_moves_game) = run_one_game();
         //println!("turns {} moves {} max {}", turns, total_moves, max_moves);

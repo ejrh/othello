@@ -1,12 +1,13 @@
 use rand::prelude::SliceRandom;
 
-use othello::game::Game;
+use othello::game::{Game, Move};
+use othello::game::default::DefaultBoard;
 
 fn random_game() {
     let mut num_turns: usize = 0;
     let mut total_moves = 0;
 
-    let mut game = Game::new();
+    let mut game: Game<DefaultBoard> = Game::new();
 
     loop {
         /* Print current game state */
@@ -14,7 +15,7 @@ fn random_game() {
         let (black_score, white_score) = game.scores();
         println!("Current score is {black_score} for black, {white_score} for white");
         let player = game.next_turn;
-        let moves: Vec<_> = game.valid_moves().collect();
+        let moves: Vec<Move> = game.valid_moves(player).into_iter().collect();
         let num_moves = moves.len();
         println!("{player:?} to move, {num_moves} moves available");
 

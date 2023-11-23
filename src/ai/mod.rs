@@ -2,13 +2,11 @@ mod immediate;
 pub mod minimax;
 mod random;
 
-use crate::game::{Colour, Game, Move};
+use crate::game::{Colour, Board, Game, Move, Score};
 
 pub use immediate::ImmediateAI;
 pub use minimax::MinimaxAI;
 pub use random::RandomAI;
-
-pub type Score = i32;
 
 /**
  * Evaluate this immediate game position, returning a `Score`.  A higher score is considered
@@ -16,13 +14,9 @@ pub type Score = i32;
  *
  * Currently, the evaluation is simply the count of friendly pieces minus the count of enemy pieces.
  */
-pub fn evaluate_immediate(game: &Game, player: Colour) -> Score {
-    let score: Score = game.board.iter()
-        .flat_map(|r| r.iter()
-            .flat_map(|sq| sq.piece
-                .map(|c| c.sign())))
-        .sum();
-
+pub fn evaluate_immediate<B: Board>(game: &Game<B>, player: Colour) -> Score {
+    let (black_count, white_count) = game.board.scores();
+    let score = black_count - white_count;
     score * player.sign()
 }
 
@@ -32,12 +26,12 @@ pub fn evaluate_immediate(game: &Game, player: Colour) -> Score {
  * game position resulting from that move).   Higher scores are better, as in the "negamax"
  * approach.
  */
-pub fn pick_best_move<F>(game: &Game, evaluate_move: F) -> Option<Move>
-where F: Fn(&Game, Move) -> Score {
+pub fn pick_best_move<B: Board, F>(game: &Game<B>, evaluate_move: F) -> Option<Move>
+where F: Fn(&Game<B>, Move) -> Score {
     // TODO - don't bother to call the evaluate_move function if there is only one move available
-    game.valid_moves().max_by_key(|m| evaluate_move(game, *m))
+    game.valid_moves(game.next_turn).into_iter().max_by_key(|m| evaluate_move(game, *m))
 }
 
 pub trait AI: Clone + Send {
-    fn choose_move(&self, game: &Game) -> Option<Move>;
+    fn choose_move<B: Board>(&self, game: &Game<B>) -> Option<Move>;
 }
