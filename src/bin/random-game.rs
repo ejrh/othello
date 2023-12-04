@@ -1,13 +1,12 @@
 use rand::prelude::SliceRandom;
 
-use othello::game::{Game, Move};
-use othello::game::default::DefaultBoard;
+use othello::game::{DefaultGame, Move};
 
 fn random_game() {
     let mut num_turns: usize = 0;
     let mut total_moves = 0;
 
-    let mut game: Game<DefaultBoard> = Game::new();
+    let mut game = DefaultGame::new();
 
     loop {
         /* Print current game state */

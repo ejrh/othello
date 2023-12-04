@@ -35,6 +35,8 @@ pub struct Game<B: Board=DefaultBoard> {
     pub(crate) board: B,
 }
 
+pub type DefaultGame = Game<DefaultBoard>;
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Move {
     pub player: Colour,

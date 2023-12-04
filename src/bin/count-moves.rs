@@ -1,14 +1,13 @@
 use rand::prelude::SliceRandom;
-use othello::game::default::DefaultBoard;
 
-use othello::game::Game;
+use othello::game::DefaultGame;
 
-fn run_one_game() -> (usize, usize, usize, Option<Game>) {
+fn run_one_game() -> (usize, usize, usize, Option<DefaultGame>) {
     let mut turns: usize = 0;
     let mut total_moves = 0;
     let mut max_moves = 0;
     let mut max_moves_game = None;
-    let mut game: Game<DefaultBoard> = Game::new();
+    let mut game = DefaultGame::new();
 
     loop {
         let moves: Vec<_> = game.valid_moves(game.next_turn).into_iter().collect();
