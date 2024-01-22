@@ -44,7 +44,7 @@ pub trait Board: Default {
 #[derive(Clone, PartialEq)]
 pub struct Game<B: Board=DefaultBoard> {
     pub next_turn: Colour,
-    pub(crate) board: B,
+    pub board: B,
 }
 
 pub type DefaultGame = Game<DefaultBoard>;

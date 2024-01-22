@@ -14,3 +14,7 @@ criterion = "0.4"
 [[bench]]
 name = "bench_board"
 harness = false
+
+[[bench]]
+name = "bench_minimax"
+harness = false
