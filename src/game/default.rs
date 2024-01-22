@@ -64,8 +64,8 @@ impl Board for DefaultBoard {
             .any(|(dy, dx)| self.count_in_dir(mov.player, mov.row, mov.col, *dy, *dx) > 0)
     }
 
-    fn moves(&self, for_player: Colour) -> Vec<Move> {
-        let moves: Vec<Move> = (0..8).flat_map(|i| (0..8)
+    fn moves(&self, for_player: Colour) -> Self::MoveSet {
+        let moves = (0..8).flat_map(|i| (0..8)
             .map(move |j| Move { player: for_player, row: i, col: j}))
             .filter(|mov| self.is_valid_move(*mov)).collect();
         moves

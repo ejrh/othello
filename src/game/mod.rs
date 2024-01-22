@@ -1,7 +1,10 @@
+mod bitboard;
+pub mod bitboardgame;
 pub mod default;
 mod direction;
 
 use std::fmt::{Debug, Formatter};
+use rand::prelude::SliceRandom;
 
 use crate::game::default::DefaultBoard;
 use crate::game::GameParseError::{InvalidPiece, TooManyColumns, TooManyRows};
@@ -20,6 +23,15 @@ pub enum Colour {
 
 pub trait Board: Default {
     type MoveSet: IntoIterator<Item=Move>;
+
+    fn new() -> Self {
+        let mut board = Self::default();
+        board.set(3, 3, Some(Colour::Black));
+        board.set(3, 4, Some(Colour::White));
+        board.set(4, 3, Some(Colour::White));
+        board.set(4, 4, Some(Colour::Black));
+        board
+    }
 
     fn is_valid_move(&self, mov: Move) -> bool;
     fn moves(&self, for_player: Colour) -> Self::MoveSet;
@@ -158,4 +170,36 @@ impl<B: Board> TryFrom<&str> for Game<B> {
 
         Ok(game)
     }
+}
+
+pub fn convert_board<B: Board, B2: Board>(board: &B) -> B2 {
+    let mut new_board: B2 = B2::default();
+    for i in 0..8 {
+        for j in 0..8 {
+            let piece = board.get(i, j);
+            new_board.set(i, j, piece);
+        }
+    }
+    new_board
+}
+
+pub fn convert<B: Board, B2: Board>(game: &Game<B>) -> Game<B2> {
+    Game {
+        next_turn: game.next_turn,
+        board: convert_board(&game.board)
+    }
+}
+
+pub fn random_board<B: Board>() -> B {
+    const PIECE_CHOICES: [Option<Colour>; 3] = [None, Some(Colour::Black), Some(Colour::White)];
+
+    let mut board = B::default();
+    for i in 0..8 {
+        for j in 0..8 {
+            let random_piece = PIECE_CHOICES.choose(&mut rand::thread_rng()).unwrap();
+            board.set(i, j, *random_piece);
+        }
+    }
+
+    board
 }
