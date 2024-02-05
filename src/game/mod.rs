@@ -11,7 +11,7 @@ use crate::game::GameParseError::{InvalidPiece, TooManyColumns, TooManyRows};
 
 pub type Score = i32;
 
-type Pos = i8;
+pub type Pos = i8;
 
 const BOARD_SIZE: Pos = 8;
 
