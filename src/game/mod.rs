@@ -3,7 +3,7 @@ pub mod bitboardgame;
 pub mod default;
 mod direction;
 
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Display, Formatter, Write};
 use rand::prelude::SliceRandom;
 
 use crate::game::default::DefaultBoard;
@@ -54,6 +54,16 @@ pub struct Move {
     pub player: Colour,
     pub row: Pos,
     pub col: Pos
+}
+
+impl Display for Move {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let colname = self.col as u8 + 65;
+        let rowname = self.row as u8 + 49;
+        f.write_char(colname as char)?;
+        f.write_char(rowname as char)?;
+        Ok(())
+    }
 }
 
 fn out_of_range(row: Pos, col: Pos) -> bool {

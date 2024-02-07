@@ -1,10 +1,14 @@
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, Mutex};
+
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
-use bevy::sprite::{MaterialMesh2dBundle};
+use bevy::sprite::{Anchor, MaterialMesh2dBundle};
+use bevy::text::Text2dBounds;
 use bevy::window::close_on_esc;
 
-use othello::ai::{AI, MinimaxAI};
-use othello::game::{Board, Colour, DefaultGame, Move, Pos};
+use othello::ai::{AI, MinimaxAI, RandomAI};
+use othello::game::{Board, Colour, DefaultGame, Game, Move, Pos};
 
 fn main() {
     App::new()
@@ -12,7 +16,7 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Update, (update_pieces, update_current_square, update_score))
         .add_systems(Update, click_square)
-        .add_systems(Update, update_ai)
+        .add_systems(Update, (update_ai, update_chat))
         .add_systems(Update, close_on_esc)
         .init_resource::<Colours>()
         .init_resource::<CurrentGame>()
@@ -23,27 +27,37 @@ fn main() {
 #[derive(Resource)]
 struct CurrentGame {
     game: DefaultGame,
-    player1: Player,
-    player2: Player,
+    over: bool
 }
 
+#[derive(Clone)]
+enum AIType {
+    RandomAI(RandomAI),
+    MinimaxAI(MinimaxAI)
+}
+
+impl AI for AIType {
+    fn choose_move<B: Board>(&self, game: &Game<B>) -> Option<Move> {
+        match self {
+            AIType::RandomAI(ai) => ai.choose_move(game),
+            AIType::MinimaxAI(ai) => ai.choose_move(game),
+        }
+    }
+}
+
+#[derive(Component)]
 struct Player {
+    colour: Colour,
     name: String,
-    ai: Option<MinimaxAI>
+    ai: Option<AIType>,
+    sender: Sender<String>
 }
 
 impl Default for CurrentGame {
     fn default() -> Self {
         CurrentGame {
             game: DefaultGame::new(),
-            player1: Player {
-                name: String::from("Computer"),
-                ai: Some(MinimaxAI { max_depth: 3 }),
-            },
-            player2: Player {
-                name: String::from("Human"),
-                ai: None,
-            }
+            over: false
         }
     }
 }
@@ -77,6 +91,12 @@ struct CurrentSquare {
 #[derive(Component)]
 struct ScoreLabel(Colour);
 
+#[derive(Component)]
+struct Chat {
+    receiver: Arc<Mutex<Receiver<String>>>,
+    messages: Vec<String>,
+}
+
 fn setup(
     mut commands: Commands,
     mut colours: ResMut<Colours>,
@@ -84,6 +104,24 @@ fn setup(
     mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>)
 {
+    let font = asset_server.load("fonts/FiraMono-Medium.ttf");
+
+    let (sender, receiver) = channel();
+
+    commands.spawn(Player {
+        colour: Colour::Black,
+        name: "Computer".to_string(),
+        ai: Some(AIType::MinimaxAI(MinimaxAI { max_depth: 3 })),
+        sender: sender.clone()
+    });
+
+    commands.spawn(Player {
+        colour: Colour::White,
+        name: "Human".to_string(),
+        ai: None,
+        sender: sender.clone()
+    });
+
     let mut camera = Camera2dBundle::default();
     camera.projection.scaling_mode = ScalingMode::FixedVertical(1000.0);
     commands.spawn(camera);
@@ -135,7 +173,6 @@ fn setup(
         }
     }
 
-    let font = asset_server.load("fonts/FiraMono-Medium.ttf");
     let text_style = TextStyle {
         font: font.clone(),
         font_size: 60.0,
@@ -174,6 +211,47 @@ fn setup(
             transform: Transform::from_xyz(-500.0, -50.0, 0.0),
             ..default()
         });
+
+    const CHAT_WIDTH: f32 = 400.0;
+    const CHAT_HEIGHT: f32 = 400.0;
+    const CHAT_TOP: f32 = 0.0;
+    const CHAT_LEFT: f32 = 400.0;
+
+    let chat_text_style = TextStyle {
+        font: font.clone(),
+        font_size: 30.0,
+        color: Color::GRAY,
+    };
+
+    let chat_text_style2 = TextStyle {
+        font: font.clone(),
+        font_size: 30.0,
+        color: Color::BLACK,
+    };
+
+    let chat = Chat {
+        receiver: Arc::new(Mutex::new(receiver)),
+        messages: Vec::new()
+    };
+    commands.spawn(chat)
+        .insert(Text2dBundle {
+            text: Text::from_sections(vec![
+                TextSection::new("chat1", chat_text_style),
+                TextSection::new("chat2", chat_text_style2),
+            ]),
+            text_anchor: Anchor::TopLeft,
+            text_2d_bounds: Text2dBounds { size: Vec2::new(CHAT_WIDTH, CHAT_HEIGHT) },
+            transform: Transform::from_xyz(CHAT_LEFT, CHAT_TOP, 0.0),
+            ..default()
+        });
+    commands.spawn(MaterialMesh2dBundle {
+        mesh: meshes
+            .add(shape::Quad::new(Vec2::new(CHAT_WIDTH, CHAT_HEIGHT)).into())
+            .into(),
+        material: colours.black.clone(),
+        transform: Transform::from_translation(Vec3::new(CHAT_LEFT + CHAT_WIDTH/2.0, CHAT_TOP - CHAT_HEIGHT/2.0, -1.)),
+        ..default()
+    });
 }
 
 fn update_pieces(
@@ -233,13 +311,18 @@ fn update_current_square(
 fn update_score(
     mut labels: Query<(&ScoreLabel, &mut Text)>,
     current_game: Res<CurrentGame>,
+    players: Query<&Player>,
 ) {
     let scores = current_game.game.scores();
 
     for (label, mut text) in labels.iter_mut() {
-        let (name, score) = match label.0 {
-            Colour::Black => (&current_game.player1.name, scores.0),
-            Colour::White => (&current_game.player2.name, scores.1),
+        let Some(player) = players.iter()
+            .find(|p| p.colour == label.0)
+        else { continue };
+        let name = &player.name;
+        let score = match label.0 {
+            Colour::Black => scores.0,
+            Colour::White => scores.1,
         };
         text.sections[0].value = format!("{name}: {score}");
     }
@@ -249,6 +332,7 @@ fn click_square(
     input: Res<Input<MouseButton>>,
     mut current_game: ResMut<CurrentGame>,
     current_square: Res<CurrentSquare>,
+    players: Query<&Player>,
 ) {
     if current_square.row == -1 || current_square.col == -1 {
         return;
@@ -257,35 +341,97 @@ fn click_square(
         return;
     }
 
-    let player = current_game.game.next_turn;
-    let mov = Move {
-        player,
-        row: current_square.row,
-        col: current_square.col,
-    };
-    if !current_game.game.board.is_valid_move(mov) {
-        return;
+    if current_game.over {
+        return
     }
-    let new_game = current_game.game.apply(mov);
-    current_game.game = new_game;
+
+    for player in players.iter() {
+        if player.colour != current_game.game.next_turn {
+            continue;
+        }
+
+        if player.ai.is_some() { continue }
+
+        let mov = Move {
+            player: player.colour,
+            row: current_square.row,
+            col: current_square.col,
+        };
+        if !current_game.game.board.is_valid_move(mov) {
+            return;
+        }
+        let new_game = current_game.game.apply(mov);
+        current_game.game = new_game;
+
+        player.sender.send(format!("Moved: {mov}")).unwrap();
+    }
 }
 
 fn update_ai(
     mut current_game: ResMut<CurrentGame>,
+    players: Query<&Player>,
 ) {
-    let player = match current_game.game.next_turn {
-        Colour::Black => &current_game.player1,
-        Colour::White => &current_game.player2,
-    };
-
-    let Some(ref ai) = player.ai else { return };
-
-    let Some(mov) = ai.choose_move(&current_game.game)
-        else { return };
-
-    if !current_game.game.board.is_valid_move(mov) {
-        return;
+    if current_game.over {
+        return
     }
-    let new_game = current_game.game.apply(mov);
-    current_game.game = new_game;
+
+    for player in players.iter() {
+        if player.colour != current_game.game.next_turn {
+            continue;
+        }
+
+        let Some(ref ai) = player.ai else { return };
+
+        let Some(mov) = ai.choose_move(&current_game.game)
+        else {
+            player.sender.send("Computer can't go".to_string()).unwrap();
+            current_game.over = true;
+            return;
+        };
+
+        if !current_game.game.board.is_valid_move(mov) {
+            return;
+        }
+        let new_game = current_game.game.apply(mov);
+        current_game.game = new_game;
+
+        player.sender.send(format!("Computer moved: {mov}")).unwrap();
+
+        let other_moves = current_game.game.valid_moves(current_game.game.next_turn);
+        if other_moves.is_empty() {
+            player.sender.send("You can't go".to_string()).unwrap();
+            current_game.over = true;
+            return;
+        }
+    }
+}
+
+fn update_chat(
+    mut query: Query<(&mut Chat, &mut Text)>,
+) {
+    let (mut chat, mut text) = query.single_mut();
+    let mut new_msgs = Vec::new();
+    let Ok(receiver_guard) = chat.receiver.lock() else { return };
+    for msg in receiver_guard.try_iter() {
+        new_msgs.push(msg);
+    }
+    drop(receiver_guard);
+
+    if new_msgs.is_empty() { return }
+
+    chat.messages.append(&mut new_msgs);
+
+    let current_style = text.sections[0].style.clone();
+
+    while chat.messages.len() > 10 {
+        chat.messages.remove(0);
+    }
+    let mut sections = Vec::new();
+    for msg in &chat.messages {
+        let mut msg = msg.clone();
+        msg.push('\n');
+        sections.push(TextSection::new(msg, current_style.clone()));
+    }
+
+    text.sections = sections;
 }
