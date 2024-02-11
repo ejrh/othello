@@ -1,6 +1,7 @@
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 
+use bevy::input::touch::TouchPhase;
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use bevy::sprite::{Anchor, MaterialMesh2dBundle};
@@ -14,13 +15,14 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
-        .add_systems(Update, (update_pieces, update_current_square, update_score))
-        .add_systems(Update, click_square)
+        .add_systems(Update, (update_pieces, update_score))
+        .add_systems(Update, (collect_events, update_current_square, click_square))
         .add_systems(Update, (update_ai, update_chat))
         .add_systems(Update, close_on_esc)
         .init_resource::<Colours>()
         .init_resource::<CurrentGame>()
         .init_resource::<CurrentSquare>()
+        .add_event::<GameEvent>()
         .run();
 }
 
@@ -95,6 +97,11 @@ struct ScoreLabel(Colour);
 struct Chat {
     receiver: Arc<Mutex<Receiver<String>>>,
     messages: Vec<String>,
+}
+
+#[derive(Event)]
+enum GameEvent {
+    ClickSquare { row: Pos, col: Pos }
 }
 
 fn setup(
@@ -276,6 +283,58 @@ fn update_pieces(
     }
 }
 
+fn update_score(
+    mut labels: Query<(&ScoreLabel, &mut Text)>,
+    current_game: Res<CurrentGame>,
+    players: Query<&Player>,
+) {
+    let scores = current_game.game.scores();
+
+    for (label, mut text) in labels.iter_mut() {
+        let Some(player) = players.iter()
+            .find(|p| p.colour == label.0)
+        else { continue };
+        let name = &player.name;
+        let score = match label.0 {
+            Colour::Black => scores.0,
+            Colour::White => scores.1,
+        };
+        text.sections[0].value = format!("{name}: {score}");
+    }
+}
+
+fn collect_events(
+    camera_query: Query<(&Camera, &GlobalTransform)>,
+    windows: Query<&Window>,
+    mut touch_events: EventReader<TouchInput>,
+    mouse_input: Res<Input<MouseButton>>,
+    mut squares: Query<(&BoardSquare, &Transform)>,
+    mut game_events: EventWriter<GameEvent>
+) {
+    let (camera, camera_transform) = camera_query.single();
+
+    let mut point = touch_events.read()
+        .filter(|e| e.phase == TouchPhase::Ended)
+        .flat_map(|e| camera.viewport_to_world_2d(camera_transform, e.position))
+        .next();
+
+    if point.is_none() && mouse_input.just_pressed(MouseButton::Left) {
+        point = windows.single().cursor_position().iter()
+            .flat_map(|pos| camera.viewport_to_world_2d(camera_transform, *pos))
+            .next();
+    }
+
+    let Some(point) = point else { return };
+
+    for (square, transform) in squares.iter() {
+        let centre = transform.translation.truncate();
+        let rect = Rect::from_center_half_size(centre, Vec2::new(40.0, 40.0));
+        if rect.contains(point) {
+            game_events.send(GameEvent::ClickSquare { row: square.row, col: square.col })
+        }
+    }
+}
+
 fn update_current_square(
     camera_query: Query<(&Camera, &GlobalTransform)>,
     windows: Query<&Window>,
@@ -308,68 +367,56 @@ fn update_current_square(
     }
 }
 
-fn update_score(
-    mut labels: Query<(&ScoreLabel, &mut Text)>,
-    current_game: Res<CurrentGame>,
-    players: Query<&Player>,
-) {
-    let scores = current_game.game.scores();
-
-    for (label, mut text) in labels.iter_mut() {
-        let Some(player) = players.iter()
-            .find(|p| p.colour == label.0)
-        else { continue };
-        let name = &player.name;
-        let score = match label.0 {
-            Colour::Black => scores.0,
-            Colour::White => scores.1,
-        };
-        text.sections[0].value = format!("{name}: {score}");
-    }
-}
-
 fn click_square(
-    input: Res<Input<MouseButton>>,
+    mut click_events: EventReader<GameEvent>,
     mut current_game: ResMut<CurrentGame>,
-    current_square: Res<CurrentSquare>,
     players: Query<&Player>,
 ) {
-    if current_square.row == -1 || current_square.col == -1 {
-        return;
-    }
-    if !input.just_pressed(MouseButton::Left) {
-        return;
-    }
-
     if current_game.over {
         return
     }
 
+    for event in click_events.read() {
+        let GameEvent::ClickSquare { row, col } = event
+        else { continue };
+
+        for player in players.iter() {
+            if player.colour != current_game.game.next_turn {
+                continue;
+            }
+
+            let mov = Move {
+                player: player.colour,
+                row: *row,
+                col: *col,
+            };
+            if !current_game.game.board.is_valid_move(mov) {
+                return;
+            }
+            let new_game = current_game.game.apply(mov);
+            current_game.game = new_game;
+
+            player.sender.send(format!("{} moved: {}", player.name, mov)).unwrap();
+        }
+    }
+
+    /* Check if other player now can't go */
     for player in players.iter() {
         if player.colour != current_game.game.next_turn {
             continue;
         }
 
-        if player.ai.is_some() { continue }
-
-        let mov = Move {
-            player: player.colour,
-            row: current_square.row,
-            col: current_square.col,
-        };
-        if !current_game.game.board.is_valid_move(mov) {
-            return;
+        if current_game.game.valid_moves(player.colour).is_empty() {
+            player.sender.send(format!("{} can't go", player.name)).unwrap();
+            current_game.over = true;
         }
-        let new_game = current_game.game.apply(mov);
-        current_game.game = new_game;
-
-        player.sender.send(format!("Moved: {mov}")).unwrap();
     }
 }
 
 fn update_ai(
-    mut current_game: ResMut<CurrentGame>,
+    current_game: ResMut<CurrentGame>,
     players: Query<&Player>,
+    mut game_events: EventWriter<GameEvent>,
 ) {
     if current_game.over {
         return
@@ -383,26 +430,9 @@ fn update_ai(
         let Some(ref ai) = player.ai else { return };
 
         let Some(mov) = ai.choose_move(&current_game.game)
-        else {
-            player.sender.send("Computer can't go".to_string()).unwrap();
-            current_game.over = true;
-            return;
-        };
+        else { continue };
 
-        if !current_game.game.board.is_valid_move(mov) {
-            return;
-        }
-        let new_game = current_game.game.apply(mov);
-        current_game.game = new_game;
-
-        player.sender.send(format!("Computer moved: {mov}")).unwrap();
-
-        let other_moves = current_game.game.valid_moves(current_game.game.next_turn);
-        if other_moves.is_empty() {
-            player.sender.send("You can't go".to_string()).unwrap();
-            current_game.over = true;
-            return;
-        }
+        game_events.send(GameEvent::ClickSquare { row: mov.row, col: mov.col });
     }
 }
 
