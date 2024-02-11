@@ -16,7 +16,8 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
         .add_systems(Update, (update_pieces, update_score))
-        .add_systems(Update, (collect_events, update_current_square, click_square))
+        .add_systems(Update, (collect_game_inputs, collect_board_inputs))
+        .add_systems(Update, (update_current_square, handle_game_events))
         .add_systems(Update, (update_ai, update_chat))
         .add_systems(Update, close_on_esc)
         .init_resource::<Colours>()
@@ -101,6 +102,7 @@ struct Chat {
 
 #[derive(Event)]
 enum GameEvent {
+    NewGame,
     ClickSquare { row: Pos, col: Pos }
 }
 
@@ -303,7 +305,17 @@ fn update_score(
     }
 }
 
-fn collect_events(
+fn collect_game_inputs(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut game_events: EventWriter<GameEvent>
+) {
+    if keyboard_input.just_pressed(KeyCode::F1) {
+        info!("New game");
+        game_events.send(GameEvent::NewGame);
+    }
+}
+
+fn collect_board_inputs(
     camera_query: Query<(&Camera, &GlobalTransform)>,
     windows: Query<&Window>,
     mut touch_events: EventReader<TouchInput>,
@@ -367,36 +379,41 @@ fn update_current_square(
     }
 }
 
-fn click_square(
+fn handle_game_events(
     mut click_events: EventReader<GameEvent>,
     mut current_game: ResMut<CurrentGame>,
     players: Query<&Player>,
 ) {
-    if current_game.over {
-        return
-    }
-
     for event in click_events.read() {
-        let GameEvent::ClickSquare { row, col } = event
-        else { continue };
+        match event {
+            GameEvent::ClickSquare { row, col } => {
+                if current_game.over {
+                    continue
+                }
 
-        for player in players.iter() {
-            if player.colour != current_game.game.next_turn {
-                continue;
+                for player in players.iter() {
+                    if player.colour != current_game.game.next_turn {
+                        continue;
+                    }
+
+                    let mov = Move {
+                        player: player.colour,
+                        row: *row,
+                        col: *col,
+                    };
+                    if !current_game.game.board.is_valid_move(mov) {
+                        return;
+                    }
+                    let new_game = current_game.game.apply(mov);
+                    current_game.game = new_game;
+
+                    player.sender.send(format!("{} moved: {}", player.name, mov)).unwrap();
+                }
+            },
+            GameEvent::NewGame => {
+                current_game.game = DefaultGame::new();
+                current_game.over = false;
             }
-
-            let mov = Move {
-                player: player.colour,
-                row: *row,
-                col: *col,
-            };
-            if !current_game.game.board.is_valid_move(mov) {
-                return;
-            }
-            let new_game = current_game.game.apply(mov);
-            current_game.game = new_game;
-
-            player.sender.send(format!("{} moved: {}", player.name, mov)).unwrap();
         }
     }
 
