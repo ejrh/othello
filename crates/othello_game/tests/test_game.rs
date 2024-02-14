@@ -1,6 +1,6 @@
 use std::fmt::Write;
 
-use othello::game::{Colour, Game, Move};
+use othello_game::{Colour, Game, Move};
 
 #[test]
 fn test_initial_layout() {
@@ -50,7 +50,7 @@ fn test_from_string() {
 
 #[test]
 fn test_from_bad_string() {
-    use othello::game::GameParseError::*;
+    use othello_game::GameParseError::*;
 
     let res: Result<Game, _> = "●●●●●●●●○".try_into();
     assert_eq!(Err(TooManyColumns), res);

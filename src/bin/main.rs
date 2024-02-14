@@ -3,12 +3,12 @@ use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 use std::thread;
 use std::time::SystemTime;
 
-use othello::ai::{AI, evaluate_immediate, MinimaxAI, RandomAI};
-use othello::game::{Colour, DefaultGame, Game};
+use othello_ai::{AI, evaluate_immediate, MinimaxAI, RandomAI};
+use othello_core::game::{Colour, DefaultGame, Game};
 
 fn simulate_one_game(black_ai: impl AI, white_ai: impl AI) -> Game {
     let mut game = DefaultGame::new();
-    // println!("Game: {:?}", &game);
+    // println!("Game: {:?}", &othello_game);
 
     loop {
         let mov = if game.next_turn == Colour::Black { black_ai.choose_move(&game) }

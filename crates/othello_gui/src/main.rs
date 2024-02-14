@@ -8,8 +8,8 @@ use bevy::sprite::{Anchor, MaterialMesh2dBundle};
 use bevy::text::Text2dBounds;
 use bevy::window::close_on_esc;
 
-use othello::ai::{AI, MinimaxAI, RandomAI};
-use othello::game::{Board, Colour, DefaultGame, Game, Move, Pos};
+use othello_ai::{AI, MinimaxAI, RandomAI};
+use othello_game::{Board, Colour, DefaultGame, Game, Move, Pos};
 
 fn main() {
     App::new()
@@ -310,7 +310,7 @@ fn collect_game_inputs(
     mut game_events: EventWriter<GameEvent>
 ) {
     if keyboard_input.just_pressed(KeyCode::F1) {
-        info!("New game");
+        info!("New othello_game");
         game_events.send(GameEvent::NewGame);
     }
 }

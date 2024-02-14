@@ -1,0 +1,15 @@
+[package]
+name = "othello_ai"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+rand.workspace = true
+othello_game = { path = "../othello_game" }
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "bench_minimax"
+harness = false

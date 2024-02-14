@@ -1,8 +1,8 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-use othello::game::bitboardgame::BitBoardBoard;
-use othello::game::{Board, Colour, convert_board, random_board};
-use othello::game::default::DefaultBoard;
+use othello_game::bitboardgame::BitBoardBoard;
+use othello_game::{Board, Colour, convert_board, random_board};
+use othello_game::default::DefaultBoard;
 
 pub fn board_benchmark(c: &mut Criterion) {
     const NUM_BOARDS: usize = 100;

@@ -1,4 +1,4 @@
-use crate::game::{out_of_range, Pos};
+use crate::{out_of_range, Pos};
 
 pub(crate) const DIRECTIONS: &[(Pos, Pos)] = &[
     (-1, -1),

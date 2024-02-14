@@ -6,8 +6,8 @@ mod direction;
 use std::fmt::{Debug, Display, Formatter, Write};
 use rand::prelude::SliceRandom;
 
-use crate::game::default::DefaultBoard;
-use crate::game::GameParseError::{InvalidPiece, TooManyColumns, TooManyRows};
+use crate::default::DefaultBoard;
+use crate::GameParseError::{InvalidPiece, TooManyColumns, TooManyRows};
 
 pub type Score = i32;
 
@@ -71,14 +71,14 @@ fn out_of_range(row: Pos, col: Pos) -> bool {
 }
 
 impl Colour {
-    pub(crate) fn opponent(self) -> Self {
+    pub fn opponent(self) -> Self {
         match self {
             Self::Black => Self::White,
             Self::White => Self::Black
         }
     }
 
-    pub(crate) fn sign(self) -> Score {
+    pub fn sign(self) -> Score {
         match self {
             Self::Black => 1,
             Self::White => -1

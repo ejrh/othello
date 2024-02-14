@@ -1,7 +1,7 @@
 use std::fmt::{Debug};
 
-use crate::game::{bitboard, Board, Colour, Move, Pos, Score};
-use crate::game::bitboard::{BitBoard, dumb7fill_occluded, ShiftDir};
+use crate::{bitboard, Board, Colour, Move, Pos, Score};
+use crate::bitboard::{BitBoard, dumb7fill_occluded, ShiftDir};
 
 #[derive(Clone, Debug, Default)]
 pub struct BitBoardBoard {
@@ -94,9 +94,9 @@ impl Iterator for Moves {
 
 #[cfg(test)]
 mod test {
-    use crate::game::Colour::Black;
-    use crate::game::default::DefaultBoard;
-    use crate::game::{convert_board, DefaultGame, random_board};
+    use crate::Colour::Black;
+    use crate::default::DefaultBoard;
+    use crate::{convert_board, DefaultGame, random_board};
     use super::*;
 
     #[test]

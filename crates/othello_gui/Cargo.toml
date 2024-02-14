@@ -1,0 +1,19 @@
+[package]
+name = "othello_gui"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+othello_ai = { path = "../othello_ai" }
+othello_game = { path = "../othello_game" }
+
+[dependencies.bevy]
+version = "0.12.1"
+default-features = false
+features = [
+    "bevy_winit",
+    "bevy_core_pipeline",
+    "bevy_render",
+    "bevy_text",
+    "webgl2"
+]

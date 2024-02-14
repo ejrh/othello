@@ -1,7 +1,7 @@
 use rand::seq::SliceRandom;
 
-use crate::ai::AI;
-use crate::game::{Board, Game, Move};
+use crate::AI;
+use othello_game::{Board, Game, Move};
 
 #[derive(Clone)]
 pub struct RandomAI {

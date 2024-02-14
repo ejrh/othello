@@ -1,5 +1,5 @@
-use crate::game::{Board, BOARD_SIZE, Colour, Move, Pos, Score};
-use crate::game::direction::{DIRECTIONS, IterateFrom};
+use crate::{Board, BOARD_SIZE, Colour, Move, Pos, Score};
+use crate::direction::{DIRECTIONS, IterateFrom};
 
 #[derive(Clone, Default, PartialEq)]
 pub(crate) struct Square {

@@ -1,31 +1,15 @@
-[package]
-name = "othello"
+[workspace]
+resolver = "2"
+members = ["crates/*",]
+default-members = ["crates/othello_game", "crates/othello_ai"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
+[workspace.dependencies]
+criterion = "0.4"
 rand = "0.8.5"
 
-[dependencies.bevy]
-version = "0.12.1"
-default-features = false
-features = [
-    "bevy_winit",
-    "bevy_core_pipeline",
-    "bevy_render",
-    "bevy_text",
-    "webgl2"
-]
-
-[dev-dependencies]
-criterion = "0.4"
-
-[[bench]]
-name = "bench_board"
-harness = false
-
-[[bench]]
-name = "bench_minimax"
-harness = false
+[package]
+name = "othello"

@@ -1,9 +1,9 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use othello::ai::{AI, MinimaxAI};
 
-use othello::game::bitboardgame::BitBoardBoard;
-use othello::game::{Board, Colour, convert_board, DefaultGame, random_board};
-use othello::game::default::DefaultBoard;
+use othello_ai::{AI, MinimaxAI};
+use othello_game::bitboardgame::BitBoardBoard;
+use othello_game::{Board, Colour, convert_board, DefaultGame, random_board};
+use othello_game::default::DefaultBoard;
 
 pub fn minimax_benchmark(c: &mut Criterion) {
     const NUM_BOARDS: usize = 100;

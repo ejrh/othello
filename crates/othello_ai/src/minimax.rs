@@ -1,5 +1,5 @@
-use crate::ai::{AI, evaluate_immediate, pick_best_move, Score};
-use crate::game::{Board, Colour, Game, Move};
+use crate::{AI, evaluate_immediate, pick_best_move, Score};
+use othello_game::{Board, Colour, Game, Move};
 
 #[derive(Clone)]
 pub struct MinimaxAI {

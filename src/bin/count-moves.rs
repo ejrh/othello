@@ -1,6 +1,6 @@
 use rand::prelude::SliceRandom;
 
-use othello::game::DefaultGame;
+use othello_core::game::DefaultGame;
 
 fn run_one_game() -> (usize, usize, usize, Option<DefaultGame>) {
     let mut turns: usize = 0;

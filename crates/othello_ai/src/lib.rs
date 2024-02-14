@@ -2,14 +2,14 @@ mod immediate;
 pub mod minimax;
 mod random;
 
-use crate::game::{Colour, Board, Game, Move, Score};
+use othello_game::{Colour, Board, Game, Move, Score};
 
 pub use immediate::ImmediateAI;
 pub use minimax::MinimaxAI;
 pub use random::RandomAI;
 
 /**
- * Evaluate this immediate game position, returning a `Score`.  A higher score is considered
+ * Evaluate this immediate othello_game position, returning a `Score`.  A higher score is considered
  * better.  Evaluation is done from the point of view of the given player, using the "negamax" approach.
  *
  * Currently, the evaluation is simply the count of friendly pieces minus the count of enemy pieces.
@@ -21,9 +21,9 @@ pub fn evaluate_immediate<B: Board>(game: &Game<B>, player: Colour) -> Score {
 }
 
 /**
- * Pick the best move in the game, for the current player, using the given evaluation function.
+ * Pick the best move in the othello_game, for the current player, using the given evaluation function.
  * This will pick the move with the highest score (as calculated by the evaluation function on the
- * game position resulting from that move).   Higher scores are better, as in the "negamax"
+ * othello_game position resulting from that move).   Higher scores are better, as in the "negamax"
  * approach.
  */
 pub fn pick_best_move<B: Board, F>(game: &Game<B>, evaluate_move: F) -> Option<Move>
