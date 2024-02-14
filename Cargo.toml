@@ -13,3 +13,5 @@ rand = "0.8.5"
 
 [package]
 name = "othello"
+version.workspace = true
+edition.workspace = true
