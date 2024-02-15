@@ -26,6 +26,19 @@ impl ShiftDir {
             ShiftDir::DownRight => 9,
         }
     }
+
+    pub(crate) fn reverse(&self) -> ShiftDir {
+        match self {
+            ShiftDir::Up => ShiftDir::Down,
+            ShiftDir::Down => ShiftDir::Up,
+            ShiftDir::Left => ShiftDir::Right,
+            ShiftDir::Right => ShiftDir::Left,
+            ShiftDir::UpLeft => ShiftDir::DownRight,
+            ShiftDir::UpRight => ShiftDir::DownLeft,
+            ShiftDir::DownLeft => ShiftDir::UpRight,
+            ShiftDir::DownRight => ShiftDir::UpLeft,
+        }
+    }
 }
 
 pub(crate) const SHIFT_DIRS: &[ShiftDir] = &[
@@ -139,11 +152,19 @@ impl From<&str> for BitBoard {
 
 impl Debug for BitBoard {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut remaining_bits = self.0;
         for i in 0..8 {
             for j in 0..8 {
                 let ch = if self.bit(i, j) { 'X' } else { '·' };
                 f.write_char(ch)?;
             }
+
+            /* If no bits left, don't bother emitting any more lines */
+            remaining_bits >>= 8;
+            if remaining_bits == 0 {
+                break
+            }
+
             if i != 7 {
                 f.write_char('\n')?;
             }
@@ -203,10 +224,23 @@ impl Not for BitBoard {
     }
 }
 
-#[inline(always)]
 /**
- * An occluded dump7fill, adapted from https://www.chessprogramming.org/Dumb7Fill.
+ * A regular dumb7fill, adapted from https://www.chessprogramming.org/Dumb7Fill.
  */
+#[inline(always)]
+pub(crate) fn dumb7fill(mut gen: BitBoard, pro: BitBoard, shift: i8) -> BitBoard {
+    let mut flood = gen;
+    for _ in 1..7 {
+        gen = gen.shift(shift) & pro;
+        flood |= gen;
+    }
+    flood
+}
+
+/**
+ * An occluded dumb7fill, adapted from https://www.chessprogramming.org/Dumb7Fill.
+ */
+#[inline(always)]
 pub(crate) fn dumb7fill_occluded(mut gen: BitBoard, pro: BitBoard, shift: i8) -> BitBoard {
     let mut flood = BitBoard::new();
     for _ in 1..7 {
@@ -262,7 +296,6 @@ mod test {
         let pro = BitBoard::from("·XXX··X·");
 
         let filled = dumb7fill_occluded(gen, pro, -1);
-        println!("gen = {}\npro = {}", gen, pro);
         assert_eq!(BitBoard::from("·XX···X·"), filled);
     }
 }

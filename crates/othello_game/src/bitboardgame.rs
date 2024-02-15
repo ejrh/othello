@@ -1,9 +1,9 @@
 use std::fmt::{Debug};
 
 use crate::{bitboard, Board, Colour, Move, Pos, Score};
-use crate::bitboard::{BitBoard, dumb7fill_occluded, ShiftDir};
+use crate::bitboard::{BitBoard, dumb7fill, dumb7fill_occluded, SHIFT_DIRS, ShiftDir};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct BitBoardBoard {
     blacks: BitBoard,
     whites: BitBoard,
@@ -46,7 +46,35 @@ impl Board for BitBoardBoard {
     }
 
     fn apply(&self, mov: Move) -> Self {
-        todo!()
+        let (mut mine, mut theirs) = match mov.player {
+            Colour::Black => (self.blacks, self.whites),
+            Colour::White => (self.whites, self.blacks)
+        };
+
+        let mov_bb = BitBoard::from((mov.row, mov.col));
+
+        let mut flips = BitBoard::new();
+        for dir in SHIFT_DIRS {
+            let span1 = dumb7fill(mine, theirs, dir.shift());
+            let span2 = dumb7fill(mov_bb, theirs, dir.reverse().shift());
+
+            flips |= span1 & span2;
+        }
+
+        mine |= mov_bb | flips;
+        theirs &= !flips;
+
+        if mov.player == Colour::Black {
+            BitBoardBoard {
+                blacks: mine,
+                whites: theirs,
+            }
+        } else {
+            BitBoardBoard {
+                blacks: theirs,
+                whites: mine,
+            }
+        }
     }
 
     fn get(&self, row: Pos, col: Pos) -> Option<Colour> {
@@ -67,7 +95,7 @@ impl Board for BitBoardBoard {
     }
 
     fn scores(&self) -> (Score, Score) {
-        todo!()
+        (self.blacks.count() as Score, self.whites.count() as Score)
     }
 }
 
@@ -94,9 +122,8 @@ impl Iterator for Moves {
 
 #[cfg(test)]
 mod test {
-    use crate::Colour::Black;
     use crate::default::DefaultBoard;
-    use crate::{convert_board, DefaultGame, random_board};
+    use crate::{convert_board, DefaultGame, Game, random_board};
     use super::*;
 
     #[test]
@@ -118,13 +145,60 @@ mod test {
     }
 
     #[test]
+    fn test_apply_move() {
+        let bb = BitBoardBoard::new();
+        for mov in bb.moves(Colour::Black) {
+            let bb2 = bb.apply(mov);
+            assert_eq!((4, 1), bb2.scores());
+        }
+        for mov in bb.moves(Colour::White) {
+            let bb2 = bb.apply(mov);
+            assert_eq!((1, 4), bb2.scores());
+        }
+
+        let game: Game<BitBoardBoard> = "\n\
+        ·●●●●●\n\
+        ·●○○○●\n\
+        ·●○·○●\n\
+        ·●○○○●\n\
+        ·●●●●●".try_into().expect("ok");
+        let mov = Move {
+            player: Colour::White,
+            row: 3,
+            col: 3,
+        };
+        let game2 = game.apply(mov);
+        let expected_game: Game<BitBoardBoard> = "\n\
+        ·●●●●●\n\
+        ·●●●●●\n\
+        ·●●●●●\n\
+        ·●●●●●\n\
+        ·●●●●●".try_into().expect("ok");
+        assert_eq!(expected_game.board, game2.board);
+    }
+
+
+    #[test]
+    fn test_apply_move_bug1() {
+        let game: Game<BitBoardBoard> = "○○○●○●●·".try_into().expect("ok");
+        let mov = Move {
+            player: Colour::Black,
+            row: 0,
+            col: 7,
+        };
+        let game2 = game.apply(mov);
+        let expected_game: Game<BitBoardBoard> = "○○○●○○○○".try_into().expect("ok");
+        assert_eq!(expected_game.board, game2.board);
+    }
+
+    #[test]
     fn test_random_boards() {
         let mut failed = false;
 
         for _ in 0..1000 {
             let bitboard: BitBoardBoard = random_board();
             let default_board: DefaultBoard = convert_board(&bitboard);
-            let game = DefaultGame { board: default_board, next_turn: Black };
+            let game = DefaultGame { board: default_board, next_turn: Colour::Black };
 
             let default_moves = game.valid_moves(Colour::Black);
             let bb_moves = bitboard.moves(Colour::Black);
@@ -138,6 +212,21 @@ mod test {
                 println!("BitBoard =\n{:?}", bb_moves.0);
                 println!();
                 failed = true;
+            } else {
+                for mov in bb_moves {
+                    let bb2 = bitboard.apply(mov);
+                    let game2 = game.apply(mov);
+                    let game2_as_bb: BitBoardBoard = convert_board(&game2.board);
+                    if bb2.blacks != game2_as_bb.blacks {
+                        println!("Result after moving was different!");
+                        println!("scores: bb={:?} def={:?}", bb2.scores(), game2_as_bb.scores());
+                        println!("Initial game = {bitboard:?}");
+                        println!("Move = {mov:?}");
+                        println!("Result(bb) = {bb2:?}");
+                        println!("Result(def) = {game2_as_bb:?}");
+                        failed = true;
+                    }
+                }
             }
         }
 
