@@ -1,9 +1,11 @@
+mod alphabeta;
 mod immediate;
 pub mod minimax;
 mod random;
 
 use othello_game::{Colour, Board, Game, Move, Score};
 
+pub use alphabeta::AlphaBetaAI;
 pub use immediate::ImmediateAI;
 pub use minimax::MinimaxAI;
 pub use random::RandomAI;
