@@ -418,14 +418,16 @@ fn handle_game_events(
     }
 
     /* Check if other player now can't go */
-    for player in players.iter() {
-        if player.colour != current_game.game.next_turn {
-            continue;
-        }
+    if !current_game.over {
+        for player in players.iter() {
+            if player.colour != current_game.game.next_turn {
+                continue;
+            }
 
-        if current_game.game.valid_moves(player.colour).is_empty() {
-            player.sender.send(format!("{} can't go", player.name)).unwrap();
-            current_game.over = true;
+            if current_game.game.valid_moves(player.colour).is_empty() {
+                player.sender.send(format!("{} can't go", player.name)).unwrap();
+                current_game.over = true;
+            }
         }
     }
 }
