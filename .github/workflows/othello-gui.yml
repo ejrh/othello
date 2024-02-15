@@ -1,0 +1,52 @@
+name: Othello GUI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up cargo cache
+      uses: actions/cache@v3
+      continue-on-error: false
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: othello-gui@${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: ${{ runner.os }}-cargo-
+    - name: Setup Rust WASM
+      run: |
+        rustup target add wasm32-unknown-unknown || true
+        cargo install wasm-bindgen-cli || true
+    - name: Build
+      run: cargo build --release -p othello_gui --target wasm32-unknown-unknown
+    - name: Generate bindings
+      run: |
+        wasm-bindgen --out-name gui \
+        --out-dir wasm/target \
+        --target web target/wasm32-unknown-unknown/release/othello_gui.wasm
+    - name: Copy additional files
+      run: |
+        cp crates/othello_gui/index.html wasm/target
+        cp -R crates/othello_gui/assets wasm/target/
+    - name: Deploy to gh-pages
+      uses: peaceiris/actions-gh-pages@v3
+      if: github.ref == 'refs/heads/master'
+      with:
+        deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+        publish_dir: wasm/target
+        destination_dir: gui
