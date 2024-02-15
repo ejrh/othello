@@ -1,5 +1,6 @@
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::Ordering;
 
 use bevy::input::touch::TouchPhase;
 use bevy::prelude::*;
@@ -18,7 +19,7 @@ fn main() {
         .add_systems(Update, (update_pieces, update_score))
         .add_systems(Update, (collect_game_inputs, collect_board_inputs))
         .add_systems(Update, (update_current_square, handle_game_events))
-        .add_systems(Update, (update_ai, update_chat))
+        .add_systems(Update, (update_ai, update_chat, update_ai_info))
         .add_systems(Update, close_on_esc)
         .init_resource::<Colours>()
         .init_resource::<CurrentGame>()
@@ -53,7 +54,7 @@ struct Player {
     colour: Colour,
     name: String,
     ai: Option<AIType>,
-    sender: Sender<String>
+    sender: Sender<String>,
 }
 
 impl Default for CurrentGame {
@@ -106,6 +107,9 @@ enum GameEvent {
     ClickSquare { row: Pos, col: Pos }
 }
 
+#[derive(Component)]
+struct AIInfoLabel;
+
 fn setup(
     mut commands: Commands,
     mut colours: ResMut<Colours>,
@@ -120,7 +124,7 @@ fn setup(
     commands.spawn(Player {
         colour: Colour::Black,
         name: "Computer".to_string(),
-        ai: Some(AIType::MinimaxAI(MinimaxAI { max_depth: 3 })),
+        ai: Some(AIType::MinimaxAI(MinimaxAI::new(3))),
         sender: sender.clone()
     });
 
@@ -261,6 +265,25 @@ fn setup(
         transform: Transform::from_translation(Vec3::new(CHAT_LEFT + CHAT_WIDTH/2.0, CHAT_TOP - CHAT_HEIGHT/2.0, -1.)),
         ..default()
     });
+
+    const AI_INFO_TOP: f32 = 400.0;
+
+    let ai_info_text_style = TextStyle {
+        font: font.clone(),
+        font_size: 30.0,
+        color: Color::WHITE,
+    };
+
+    commands.spawn(AIInfoLabel)
+        .insert(Text2dBundle {
+            text: Text::from_sections(vec![
+                TextSection::new("ai", ai_info_text_style),
+            ]),
+            text_anchor: Anchor::TopLeft,
+            text_2d_bounds: Text2dBounds { size: Vec2::new(CHAT_WIDTH, CHAT_HEIGHT) },
+            transform: Transform::from_xyz(CHAT_LEFT, AI_INFO_TOP, 0.0),
+            ..default()
+        });
 }
 
 fn update_pieces(
@@ -483,4 +506,23 @@ fn update_chat(
     }
 
     text.sections = sections;
+}
+
+fn update_ai_info(
+    mut game_events: EventReader<GameEvent>,
+    players: Query<&Player>,
+    mut ai_text: Query<&mut Text, With<AIInfoLabel>>
+) {
+    if game_events.is_empty() { return }
+
+    let mut ai_text = ai_text.single_mut();
+
+    for player in players.iter() {
+        let Some(AIType::MinimaxAI(ai)) = &player.ai
+            else { continue };
+        let Some(info) = ai.info()
+            else { continue };
+        ai_text.sections[0].value = format!("AI Info:\n\
+        Nodes Searched: {}\n", info.nodes_searched.load(Ordering::Relaxed));
+    }
 }

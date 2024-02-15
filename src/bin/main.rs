@@ -76,7 +76,7 @@ fn simulate_many_games_in_parallel(black_ai: &impl AI, white_ai: &impl AI, num_g
 fn main() {
     println!("Othello");
 
-    let black_ai = MinimaxAI { max_depth: 3 };
+    let black_ai = AlphaBetaAI { max_depth: 3 };
     let white_ai = RandomAI { };
 
     let num_games = 10000;
