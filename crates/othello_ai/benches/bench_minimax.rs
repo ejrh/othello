@@ -10,7 +10,7 @@ pub fn minimax_benchmark(c: &mut Criterion) {
 
     let boards: Vec<DefaultBoard> = (0..NUM_BOARDS).map(|_| random_board()).collect();
 
-    let ai = MinimaxAI { max_depth: 3 };
+    let ai = MinimaxAI::new(3);
     
     c.bench_function("minimax", |b| {
         b.iter(|| {
