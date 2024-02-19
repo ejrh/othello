@@ -195,7 +195,23 @@ fn setup(
     commands.spawn(Text2dBundle {
         text: Text::from_section("OTHELLO", text_style)
             .with_alignment(TextAlignment::Left),
-        transform: Transform::from_xyz(-500.0, 0.0, 0.0),
+        transform: Transform::from_xyz(-500.0, 20.0, 0.0),
+        ..default()
+    });
+
+    const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+    let version_str = format!("Ver {VERSION}");
+
+    let text_style = TextStyle {
+        font: font.clone(),
+        font_size: 20.0,
+        color: Color::GOLD,
+    };
+
+    commands.spawn(Text2dBundle {
+        text: Text::from_section(version_str, text_style)
+            .with_alignment(TextAlignment::Left),
+        transform: Transform::from_xyz(-500.0, -20.0, 0.0),
         ..default()
     });
 
@@ -208,7 +224,7 @@ fn setup(
     commands.spawn(ScoreLabel(Colour::Black))
         .insert(Text2dBundle {
             text: Text::from_section("black", score_text_style),
-            transform: Transform::from_xyz(-500.0, 50.0, 0.0),
+            transform: Transform::from_xyz(-500.0, 100.0, 0.0),
             ..default()
         });
 
@@ -221,7 +237,7 @@ fn setup(
     commands.spawn(ScoreLabel(Colour::White))
         .insert(Text2dBundle {
             text: Text::from_section("white", score_text_style),
-            transform: Transform::from_xyz(-500.0, -50.0, 0.0),
+            transform: Transform::from_xyz(-500.0, -100.0, 0.0),
             ..default()
         });
 
