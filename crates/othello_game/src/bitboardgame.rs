@@ -18,7 +18,9 @@ impl Board for BitBoardBoard {
     type MoveSet = Moves;
 
     fn is_valid_move(&self, mov: Move) -> bool {
-        todo!()
+        let all_moves_bb = self.moves(mov.player).1;
+        let mov_bb = BitBoard::from((mov.row, mov.col));
+        !(all_moves_bb & mov_bb).is_empty()
     }
 
     fn moves(&self, player: Colour) -> Self::MoveSet {
