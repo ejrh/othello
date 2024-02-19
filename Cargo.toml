@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["crates/*",]
-default-members = ["crates/othello_game", "crates/othello_ai"]
+default-members = [".", "crates/othello_game", "crates/othello_ai"]
 
 [workspace.package]
 version = "0.2.0"
@@ -15,3 +15,8 @@ rand = "0.8.5"
 name = "othello"
 version.workspace = true
 edition.workspace = true
+
+[dependencies]
+rand.workspace = true
+othello_ai = { path = "crates/othello_ai" }
+othello_game = { path = "crates/othello_game" }

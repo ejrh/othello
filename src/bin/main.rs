@@ -3,8 +3,8 @@ use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 use std::thread;
 use std::time::SystemTime;
 
-use othello_ai::{AI, evaluate_immediate, MinimaxAI, RandomAI};
-use othello_core::game::{Colour, DefaultGame, Game};
+use othello_ai::{AI, evaluate_immediate, AlphaBetaAI, RandomAI};
+use othello_game::{Colour, DefaultGame, Game};
 
 fn simulate_one_game(black_ai: impl AI, white_ai: impl AI) -> Game {
     let mut game = DefaultGame::new();
@@ -79,7 +79,7 @@ fn main() {
     let black_ai = AlphaBetaAI { max_depth: 3 };
     let white_ai = RandomAI { };
 
-    let num_games = 10000;
+    let num_games = 1000;
     let num_threads = thread::available_parallelism()
         .map_or(1, |x| x.get());
     let t0 = SystemTime::now();
