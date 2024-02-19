@@ -265,7 +265,7 @@ mod test {
     fn test_from() {
         let bb = BitBoard::from((4, 2));
         assert_eq!(1 << (4 * 8 + 2), bb.0);
-        assert_eq!(true, bb.bit(4, 2));
+        assert!(bb.bit(4, 2));
         assert_eq!(1, bb.count());
 
         let bb = BitBoard::from("X·····X·");

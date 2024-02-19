@@ -3,8 +3,6 @@ mod immediate;
 pub mod minimax;
 mod random;
 
-use std::cell::Cell;
-use std::fmt::{Display, Formatter};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use othello_game::{Colour, Board, Game, Move, Score};
 

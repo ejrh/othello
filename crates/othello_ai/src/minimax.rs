@@ -1,4 +1,3 @@
-use std::sync::atomic::Ordering;
 use crate::{AI, AIInfo, evaluate_immediate, pick_best_move, Score};
 use othello_game::{Board, Colour, Game, Move};
 
@@ -40,7 +39,7 @@ pub fn evaluate_to_depth<B: Board>(game: &Game<B>, player: Colour, depth: usize,
         let best_score = game.valid_moves(opponent)
             .into_iter()
             .map(|m| game.apply(m))
-            .map(|g| -evaluate_to_depth(&g, opponent, depth - 1, &info)).min();
+            .map(|g| -evaluate_to_depth(&g, opponent, depth - 1, info)).min();
 
         best_score.unwrap_or_else(|| evaluate_immediate(game, player))
     }

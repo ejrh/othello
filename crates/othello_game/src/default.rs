@@ -65,10 +65,9 @@ impl Board for DefaultBoard {
     }
 
     fn moves(&self, for_player: Colour) -> Self::MoveSet {
-        let moves = (0..8).flat_map(|i| (0..8)
+        (0..8).flat_map(|i| (0..8)
             .map(move |j| Move { player: for_player, row: i, col: j}))
-            .filter(|mov| self.is_valid_move(*mov)).collect();
-        moves
+            .filter(|mov| self.is_valid_move(*mov)).collect()
     }
 
     fn apply(&self, mov: Move) -> Self {

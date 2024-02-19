@@ -11,8 +11,7 @@ pub struct BitBoardBoard {
 
 fn moves_in_dir(mine: BitBoard, theirs: BitBoard, shift_dir: ShiftDir) -> BitBoard {
     let moves = dumb7fill_occluded(mine, theirs, shift_dir.shift());
-    let moves = moves.shift(shift_dir.shift());
-    moves
+    moves.shift(shift_dir.shift())
 }
 
 impl Board for BitBoardBoard {
@@ -137,7 +136,7 @@ mod test {
     #[test]
     fn test_new_moves() {
         let bb = BitBoardBoard::new();
-        let mut moves = bb.moves(Colour::Black);
+        let moves = bb.moves(Colour::Black);
         let expected_moves = BitBoard::from(&[(2, 4), (3, 5), (4, 2), (5, 3)]);
         assert_eq!(expected_moves, moves.1);
         let all_moves: Vec<_> = moves.collect();
