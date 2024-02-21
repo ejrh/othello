@@ -1,6 +1,8 @@
+use std::default::Default;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
+use std::time::{Duration, Instant};
 
 use bevy::input::touch::TouchPhase;
 use bevy::prelude::*;
@@ -16,7 +18,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
-        .add_systems(Update, (update_pieces, update_score))
+        .add_systems(Update, (update_pieces, update_score, update_time))
         .add_systems(Update, (collect_game_inputs, collect_board_inputs))
         .add_systems(Update, (update_current_square, handle_game_events))
         .add_systems(Update, (update_ai, update_chat, update_ai_info))
@@ -31,7 +33,8 @@ fn main() {
 #[derive(Resource)]
 struct CurrentGame {
     game: DefaultGame,
-    over: bool
+    over: bool,
+    move_start: Instant,
 }
 
 #[derive(Clone)]
@@ -55,13 +58,15 @@ struct Player {
     name: String,
     ai: Option<AIType>,
     sender: Sender<String>,
+    time: Duration,
 }
 
 impl Default for CurrentGame {
     fn default() -> Self {
         CurrentGame {
             game: DefaultGame::new(),
-            over: false
+            over: false,
+            move_start: Instant::now(),
         }
     }
 }
@@ -96,6 +101,9 @@ struct CurrentSquare {
 struct ScoreLabel(Colour);
 
 #[derive(Component)]
+struct TimeLabel(Colour);
+
+#[derive(Component)]
 struct Chat {
     receiver: Arc<Mutex<Receiver<String>>>,
     messages: Vec<String>,
@@ -124,15 +132,17 @@ fn setup(
     commands.spawn(Player {
         colour: Colour::Black,
         name: "Computer".to_string(),
-        ai: Some(AIType::MinimaxAI(MinimaxAI::new(3))),
-        sender: sender.clone()
+        ai: Some(AIType::MinimaxAI(MinimaxAI::new(6))),
+        sender: sender.clone(),
+        time: Default::default()
     });
 
     commands.spawn(Player {
         colour: Colour::White,
         name: "Human".to_string(),
         ai: None,
-        sender: sender.clone()
+        sender: sender.clone(),
+        time: Default::default()
     });
 
     let mut camera = Camera2dBundle::default();
@@ -241,6 +251,32 @@ fn setup(
             ..default()
         });
 
+    let time_text_style = TextStyle {
+        font: font.clone(),
+        font_size: 30.0,
+        color: Color::BLACK,
+    };
+
+    commands.spawn(TimeLabel(Colour::Black))
+        .insert(Text2dBundle {
+            text: Text::from_section("black time", time_text_style),
+            transform: Transform::from_xyz(-500.0, 150.0, 0.0),
+            ..default()
+        });
+
+    let time_text_style = TextStyle {
+        font: font.clone(),
+        font_size: 30.0,
+        color: Color::WHITE,
+    };
+
+    commands.spawn(TimeLabel(Colour::White))
+        .insert(Text2dBundle {
+            text: Text::from_section("white time", time_text_style),
+            transform: Transform::from_xyz(-500.0, -150.0, 0.0),
+            ..default()
+        });
+
     const CHAT_WIDTH: f32 = 400.0;
     const CHAT_HEIGHT: f32 = 400.0;
     const CHAT_TOP: f32 = 0.0;
@@ -344,6 +380,27 @@ fn update_score(
     }
 }
 
+fn update_time(
+    mut labels: Query<(&TimeLabel, &mut Text)>,
+    current_game: Res<CurrentGame>,
+    players: Query<&Player>,
+) {
+    for (label, mut text) in labels.iter_mut() {
+        let Some(player) = players.iter()
+            .find(|p| p.colour == label.0)
+            else { continue };
+        let mut total_time = player.time;
+        if !current_game.over && current_game.game.next_turn == player.colour {
+            total_time += current_game.move_start.elapsed();
+        }
+        let secs = total_time.as_secs();
+        let mins = secs / 60;
+        let secs = secs - mins * 60;
+        let time_str = format!("{mins}:{secs:02}");
+        text.sections[0].value = time_str;
+    }
+}
+
 fn collect_game_inputs(
     keyboard_input: Res<Input<KeyCode>>,
     mut game_events: EventWriter<GameEvent>
@@ -421,7 +478,7 @@ fn update_current_square(
 fn handle_game_events(
     mut click_events: EventReader<GameEvent>,
     mut current_game: ResMut<CurrentGame>,
-    players: Query<&Player>,
+    mut players: Query<&mut Player>,
 ) {
     for event in click_events.read() {
         match event {
@@ -430,7 +487,7 @@ fn handle_game_events(
                     continue
                 }
 
-                for player in players.iter() {
+                for mut player in players.iter_mut() {
                     if player.colour != current_game.game.next_turn {
                         continue;
                     }
@@ -446,12 +503,16 @@ fn handle_game_events(
                     let new_game = current_game.game.apply(mov);
                     current_game.game = new_game;
 
+                    player.time += current_game.move_start.elapsed();
+                    current_game.move_start = Instant::now();
+
                     player.sender.send(format!("{} moved: {}", player.name, mov)).unwrap();
                 }
             },
             GameEvent::NewGame => {
                 current_game.game = DefaultGame::new();
                 current_game.over = false;
+                current_game.move_start = Instant::now();
             }
         }
     }
