@@ -515,6 +515,7 @@ fn handle_game_events(
                 current_game.game = DefaultGame::new();
                 current_game.over = false;
                 current_game.move_start = Instant::now();
+                players.for_each_mut(|mut p| p.time = Duration::default());
             }
         }
     }
