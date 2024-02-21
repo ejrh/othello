@@ -2,13 +2,13 @@ use std::default::Default;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
-use std::time::{Duration, Instant};
 
 use bevy::input::touch::TouchPhase;
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use bevy::sprite::{Anchor, MaterialMesh2dBundle};
 use bevy::text::Text2dBounds;
+use bevy::utils::{Duration, Instant};
 use bevy::window::close_on_esc;
 
 use othello_ai::{AI, MinimaxAI, RandomAI};
