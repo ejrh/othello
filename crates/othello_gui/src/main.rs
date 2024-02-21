@@ -393,10 +393,12 @@ fn update_time(
         if !current_game.over && current_game.game.next_turn == player.colour {
             total_time += current_game.move_start.elapsed();
         }
+        let ms = total_time.as_millis();
+        let ms = ms - total_time.as_secs() as u128 * 1000;
         let secs = total_time.as_secs();
         let mins = secs / 60;
         let secs = secs - mins * 60;
-        let time_str = format!("{mins}:{secs:02}");
+        let time_str = format!("{mins}:{secs:02}.{ms:03}");
         text.sections[0].value = time_str;
     }
 }
