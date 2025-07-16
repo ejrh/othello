@@ -4,7 +4,8 @@ pub mod default;
 mod direction;
 
 use std::fmt::{Debug, Display, Formatter, Write};
-use rand::prelude::SliceRandom;
+
+use rand::seq::SliceRandom;
 
 use crate::default::DefaultBoard;
 use crate::GameParseError::{InvalidPiece, TooManyColumns, TooManyRows};

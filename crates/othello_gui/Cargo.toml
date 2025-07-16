@@ -8,12 +8,14 @@ othello_ai = { path = "../othello_ai" }
 othello_game = { path = "../othello_game" }
 
 [dependencies.bevy]
-version = "0.12.1"
+version = "0.16"
 default-features = false
 features = [
-    "bevy_winit",
     "bevy_core_pipeline",
+    "bevy_gizmos",
+    "bevy_log",
     "bevy_render",
     "bevy_text",
+    "bevy_winit",
     "webgl2"
 ]

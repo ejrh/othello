@@ -1,4 +1,4 @@
-use rand::prelude::SliceRandom;
+use rand::seq::SliceRandom;
 
 use othello_game::DefaultGame;
 
