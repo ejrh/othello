@@ -1,10 +1,10 @@
 use std::fmt::Write;
 
-use othello_game::{Colour, Game, Move};
+use othello_game::{Colour, Game, GameRepr, Move};
 
 #[test]
 fn test_initial_layout() {
-    let game: Game = Game::new();
+    let game: GameRepr = GameRepr::new();
 
     assert_eq!(None, game.get_piece(0, 0));
     assert_eq!(Some(Colour::Black), game.get_piece(3, 3));
@@ -17,7 +17,7 @@ fn test_initial_layout() {
 
 #[test]
 fn test_debug() {
-    let game: Game = Game::new();
+    let game: GameRepr = GameRepr::new();
 
     let mut str = String::new();
     write!(&mut str, "{:?}", game).unwrap();
@@ -35,7 +35,7 @@ fn test_from_string() {
         ···●○···\n\
         ········\n········\n········\n";
 
-    let game: Game = game_str.try_into().expect("string should be valid");
+    let game: GameRepr = game_str.try_into().expect("string should be valid");
 
     assert_eq!(Some(Colour::Black), game.get_piece(0, 0));
     assert_eq!(Some(Colour::White), game.get_piece(0, 1));
@@ -52,19 +52,19 @@ fn test_from_string() {
 fn test_from_bad_string() {
     use othello_game::GameParseError::*;
 
-    let res: Result<Game, _> = "●●●●●●●●○".try_into();
+    let res: Result<GameRepr, _> = "●●●●●●●●○".try_into();
     assert_eq!(Err(TooManyColumns), res);
 
-    let res: Result<Game, _> = "●\n●\n●\n●\n●\n●\n●\n●\n○".try_into();
+    let res: Result<GameRepr, _> = "●\n●\n●\n●\n●\n●\n●\n●\n○".try_into();
     assert_eq!(Err(TooManyRows), res);
 
-    let res: Result<Game, _> = "qwerty".try_into();
+    let res: Result<GameRepr, _> = "qwerty".try_into();
     assert_eq!(Err(InvalidPiece), res);
 }
 
 #[test]
 fn test_initial_moves() {
-    let game: Game = Game::new();
+    let game: GameRepr = GameRepr::new();
 
     let mut moves = game.valid_moves(Colour::Black).into_iter();
 
@@ -77,7 +77,7 @@ fn test_initial_moves() {
 
 #[test]
 fn test_apply_move() {
-    let game: Game = Game::new();
+    let game: GameRepr = GameRepr::new();
 
     let mov = Move {
         player: Colour::Black,
@@ -100,7 +100,7 @@ fn test_apply_move() {
 
 #[test]
 fn test_no_moves() {
-    let game: Game = "○●●●●●●●\n".try_into().unwrap();
+    let game: GameRepr = "○●●●●●●●\n".try_into().unwrap();
 
     let mut moves = game.valid_moves(Colour::Black).into_iter();
     assert_eq!(None, moves.next());

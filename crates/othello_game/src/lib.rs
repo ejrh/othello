@@ -42,13 +42,81 @@ pub trait Board: Default {
     fn scores(&self) -> (Score, Score);
 }
 
+pub trait Game {
+    fn next_turn(&self) -> Colour;
+    fn is_valid_move(&self, mov: Move) -> bool;
+    fn valid_moves(&self, for_player: Colour) -> Vec<Move>;
+    fn apply_in_place(&mut self, mov: Move);
+    fn get_piece(&self, row: Pos, col: Pos) -> Option<Colour>;
+    fn scores(&self) -> (Score, Score);
+}
+
 #[derive(Clone, PartialEq)]
-pub struct Game<B: Board=DefaultBoard> {
+pub struct GameRepr<B: Board=DefaultBoard> {
     pub next_turn: Colour,
     pub board: B,
 }
 
-pub type DefaultGame = Game<DefaultBoard>;
+impl<B: Board> GameRepr<B> {
+    pub fn empty() -> Self {
+        let board: B = Default::default();
+        Self {
+            next_turn: Colour::Black,
+            board,
+        }
+    }
+
+    pub fn new() -> Self {
+        let mut board: B = Default::default();
+        board.set(3, 3, Some(Colour::Black));
+        board.set(3, 4, Some(Colour::White));
+        board.set(4, 3, Some(Colour::White));
+        board.set(4, 4, Some(Colour::Black));
+        Self {
+            next_turn: Colour::Black,
+            board,
+        }
+    }
+
+    pub fn apply(&self, mov: Move) -> Self {
+        Self {
+            board: self.board.apply(mov),
+            next_turn: self.next_turn.opponent(),
+        }
+    }
+}
+
+impl<B: Board> Game for GameRepr<B> {
+    fn next_turn(&self) -> Colour {
+        self.next_turn
+    }
+
+    fn is_valid_move(&self, mov: Move) -> bool {
+        self.board.is_valid_move(mov)
+    }
+
+    fn valid_moves(&self, for_player: Colour) -> Vec<Move> {
+        self.board.moves(for_player).into_iter().collect()
+    }
+
+    fn apply_in_place(&mut self, mov: Move) {
+        let new_g = Self {
+            board: self.board.apply(mov),
+            next_turn: self.next_turn.opponent(),
+        };
+        *self = new_g;
+    }
+
+    fn get_piece(&self, row: Pos, col: Pos) -> Option<Colour> {
+        self.board.get(row, col)
+    }
+
+    fn scores(&self) -> (Score, Score) {
+        self.board.scores()
+    }
+}
+
+pub type DefaultGame = GameRepr<DefaultBoard>;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Move {
@@ -87,54 +155,13 @@ impl Colour {
     }
 }
 
-impl<B: Board> Game<B> {
-    pub fn new() -> Game<B> {
-        let mut board: B = Default::default();
-        board.set(3, 3, Some(Colour::Black));
-        board.set(3, 4, Some(Colour::White));
-        board.set(4, 3, Some(Colour::White));
-        board.set(4, 4, Some(Colour::Black));
-        Game {
-            next_turn: Colour::Black,
-            board,
-        }
-    }
-
-    pub fn empty() -> Game<B> {
-        let board: B = Default::default();
-        Game {
-            next_turn: Colour::Black,
-            board,
-        }
-    }
-
-    pub fn valid_moves(&self, for_player: Colour) -> B::MoveSet {
-        self.board.moves(for_player)
-    }
-
-    pub fn apply(&self, mov: Move) -> Self {
-        Game {
-            board: self.board.apply(mov),
-            next_turn: self.next_turn.opponent(),
-        }
-    }
-
-    pub fn get_piece(&self, row: Pos, col: Pos) -> Option<Colour> {
-        self.board.get(row, col)
-    }
-
-    pub fn scores(&self) -> (Score, Score) {
-        self.board.scores()
-    }
-}
-
-impl<B: Board> Default for Game<B> {
+impl<B: Board> Default for GameRepr<B> {
     fn default() -> Self {
-        Game::new()
+        GameRepr::new()
     }
 }
 
-impl<B: Board> Debug for Game<B> {
+impl<B: Board> Debug for GameRepr<B> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for i in 0..8 {
             for j in 0..8 {
@@ -158,11 +185,11 @@ pub enum GameParseError {
     InvalidPiece,
 }
 
-impl<B: Board> TryFrom<&str> for Game<B> {
+impl<B: Board> TryFrom<&str> for GameRepr<B> {
     type Error = GameParseError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let mut game: Game<B> = Game::empty();
+        let mut game: GameRepr<B> = GameRepr::empty();
 
         for (i, line) in value.split_terminator('\n').enumerate() {
             for (j, ch) in line.chars().enumerate() {
@@ -194,10 +221,17 @@ pub fn convert_board<B: Board, B2: Board>(board: &B) -> B2 {
     new_board
 }
 
-pub fn convert<B: Board, B2: Board>(game: &Game<B>) -> Game<B2> {
-    Game {
-        next_turn: game.next_turn,
-        board: convert_board(&game.board)
+pub fn convert<B: Board>(game: &dyn Game) -> GameRepr<B> {
+    let mut b = DefaultBoard::new();
+    for i in 0..8 {
+        for j in 0..8 {
+            let piece = game.get_piece(i, j);
+            b.set(i, j, piece);
+        }
+    }
+    GameRepr {
+        next_turn: game.next_turn(),
+        board: convert_board(&b)
     }
 }
 

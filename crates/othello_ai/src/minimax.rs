@@ -1,5 +1,6 @@
 use crate::{AI, AIInfo, evaluate_immediate, pick_best_move, Score};
-use othello_game::{Board, Colour, convert, Game, Move};
+
+use othello_game::{Board, Colour, convert, Game, GameRepr, Move};
 use othello_game::bitboardgame::BitBoardBoard;
 
 #[derive(Clone)]
@@ -16,13 +17,13 @@ impl MinimaxAI {
 }
 
 impl AI for MinimaxAI {
-    fn choose_move<B: Board>(&self, game: &Game<B>) -> Option<Move> {
-        let game: Game<BitBoardBoard> = convert(game);
+    fn choose_move(&self, game: &dyn Game) -> Option<Move> {
+        let game: GameRepr<BitBoardBoard> = convert(game);
         pick_best_move(&game, |g, m| evaluate_to_depth(
             &g.apply(m),
             game.next_turn,
             self.max_depth,
-        &self.info))
+            &self.info))
     }
 
     fn info(&self) -> Option<&AIInfo> {
@@ -30,7 +31,7 @@ impl AI for MinimaxAI {
     }
 }
 
-pub fn evaluate_to_depth<B: Board>(game: &Game<B>, player: Colour, depth: usize, info: &AIInfo) -> Score {
+pub fn evaluate_to_depth<B: Board>(game: &GameRepr<B>, player: Colour, depth: usize, info: &AIInfo) -> Score {
     info.add_node();
 
     if depth == 0 {

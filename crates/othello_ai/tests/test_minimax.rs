@@ -1,10 +1,10 @@
 use othello_ai::minimax::evaluate_to_depth;
 use othello_ai::{AIInfo, evaluate_immediate};
-use othello_game::{Colour, Game, Score};
+use othello_game::{Colour, Game, GameRepr, Score};
 
 #[test]
 fn test_depth_0() {
-    let game: Game = "●○○○".try_into().expect("ok");
+    let game: GameRepr = "●○○○".try_into().expect("ok");
 
     let info = AIInfo::default();
 
@@ -17,7 +17,7 @@ fn test_depth_0() {
 
 #[test]
 fn test_depth_1() {
-    let mut game: Game = "\n\
+    let mut game: GameRepr = "\n\
     ·●○○○\n\
     ·○○\n\
     ·○".try_into().expect("ok");
@@ -26,7 +26,7 @@ fn test_depth_1() {
 
     /* Estimate the value of a othello_game assuming the opponent makes its best move, i.e. the worst
        move for us! */
-    fn estimate_game(game: &Game) -> Score {
+    fn estimate_game(game: &GameRepr) -> Score {
         let mut best_score = Score::MAX;
         let mut best_move = None;
         for mov in game.valid_moves(game.next_turn) {

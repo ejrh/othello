@@ -1,4 +1,4 @@
-use std::fmt::{Debug};
+use std::fmt::Debug;
 
 use crate::{bitboard, Board, Colour, Move, Pos, Score};
 use crate::bitboard::{BitBoard, dumb7fill, dumb7fill_occluded, SHIFT_DIRS, ShiftDir};
@@ -124,7 +124,7 @@ impl Iterator for Moves {
 #[cfg(test)]
 mod test {
     use crate::default::DefaultBoard;
-    use crate::{convert_board, DefaultGame, Game, random_board};
+    use crate::{convert_board, DefaultGame, GameRepr, random_board, Game};
     use super::*;
 
     #[test]
@@ -157,7 +157,7 @@ mod test {
             assert_eq!((1, 4), bb2.scores());
         }
 
-        let game: Game<BitBoardBoard> = "\n\
+        let game: GameRepr<BitBoardBoard> = "\n\
         ·●●●●●\n\
         ·●○○○●\n\
         ·●○·○●\n\
@@ -169,7 +169,7 @@ mod test {
             col: 3,
         };
         let game2 = game.apply(mov);
-        let expected_game: Game<BitBoardBoard> = "\n\
+        let expected_game: GameRepr<BitBoardBoard> = "\n\
         ·●●●●●\n\
         ·●●●●●\n\
         ·●●●●●\n\
@@ -181,14 +181,14 @@ mod test {
 
     #[test]
     fn test_apply_move_bug1() {
-        let game: Game<BitBoardBoard> = "○○○●○●●·".try_into().expect("ok");
+        let game: GameRepr<BitBoardBoard> = "○○○●○●●·".try_into().expect("ok");
         let mov = Move {
             player: Colour::Black,
             row: 0,
             col: 7,
         };
         let game2 = game.apply(mov);
-        let expected_game: Game<BitBoardBoard> = "○○○●○○○○".try_into().expect("ok");
+        let expected_game: GameRepr<BitBoardBoard> = "○○○●○○○○".try_into().expect("ok");
         assert_eq!(expected_game.board, game2.board);
     }
 

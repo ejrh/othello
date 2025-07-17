@@ -1,6 +1,6 @@
 use rand::seq::SliceRandom;
 
-use othello_game::{DefaultGame, Move};
+use othello_game::{DefaultGame, Game, Move};
 
 fn random_game() {
     let mut num_turns: usize = 0;

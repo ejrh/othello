@@ -13,7 +13,7 @@ use bevy::text::TextBounds;
 use bevy::time::Stopwatch;
 
 use othello_ai::{AI, MinimaxAI, RandomAI};
-use othello_game::{Board, Colour, DefaultGame, Game, Move, Pos};
+use othello_game::{Colour, DefaultGame, Game, Move, Pos};
 
 fn main() {
     App::new()
@@ -34,7 +34,7 @@ fn main() {
 
 #[derive(Resource)]
 struct CurrentGame {
-    game: DefaultGame,
+    game: Box<dyn Game + Send + Sync>,
     over: bool,
 }
 
@@ -44,8 +44,8 @@ enum AIType {
     MinimaxAI(MinimaxAI)
 }
 
-impl AI for AIType {
-    fn choose_move<B: Board>(&self, game: &Game<B>) -> Option<Move> {
+impl AIType {
+    fn choose_move(&self, game: &dyn Game) -> Option<Move> {
         match self {
             AIType::RandomAI(ai) => ai.choose_move(game),
             AIType::MinimaxAI(ai) => ai.choose_move(game),
@@ -65,7 +65,7 @@ struct Player {
 impl Default for CurrentGame {
     fn default() -> Self {
         CurrentGame {
-            game: DefaultGame::new(),
+            game: Box::new(DefaultGame::new()),
             over: false,
         }
     }
@@ -325,7 +325,7 @@ fn update_pieces(
     current_game: Res<CurrentGame>,
 ) {
     for (disc, mut vis, mut material) in discs.iter_mut() {
-        match current_game.game.board.get(disc.row, disc.col) {
+        match current_game.game.get_piece(disc.row, disc.col) {
             Some(Colour::Black) => {
                 material.0 = theme.black_material.clone();
                 *vis = Visibility::Inherited;
@@ -472,7 +472,7 @@ fn handle_game_events(
                 }
 
                 for player in players.iter() {
-                    if player.colour != current_game.game.next_turn {
+                    if player.colour != current_game.game.next_turn() {
                         continue;
                     }
 
@@ -481,18 +481,17 @@ fn handle_game_events(
                         row: *row,
                         col: *col,
                     };
-                    if !current_game.game.board.is_valid_move(mov) {
+                    if !current_game.game.is_valid_move(mov) {
                         return;
                     }
-                    let new_game = current_game.game.apply(mov);
-                    current_game.game = new_game;
+                    current_game.game.apply_in_place(mov);
 
                     player.sender.send(format!("{} moved: {}", player.name, mov))
                         .unwrap_or_else(|e| error!("Failed to send message: {}", e));
                 }
             },
             GameEvent::NewGame => {
-                current_game.game = DefaultGame::new();
+                current_game.game = Box::new(DefaultGame::new());
                 current_game.over = false;
                 players.iter_mut().for_each(|mut p| p.player_time.reset());
             }
@@ -502,7 +501,7 @@ fn handle_game_events(
     /* Check if other player now can't go */
     if !current_game.over {
         for player in players.iter() {
-            if player.colour != current_game.game.next_turn {
+            if player.colour != current_game.game.next_turn() {
                 continue;
             }
 
@@ -515,7 +514,7 @@ fn handle_game_events(
 
     /* Update players' stopwatches */
     for mut player in players.iter_mut() {
-        if current_game.over || player.colour != current_game.game.next_turn {
+        if current_game.over || player.colour != current_game.game.next_turn() {
             player.player_time.pause();
         } else {
             player.player_time.unpause();
@@ -533,13 +532,13 @@ fn update_ai(
     }
 
     for player in players.iter() {
-        if player.colour != current_game.game.next_turn {
+        if player.colour != current_game.game.next_turn() {
             continue;
         }
 
         let Some(ref ai) = player.ai else { return };
 
-        let Some(mov) = ai.choose_move(&current_game.game)
+        let Some(mov) = ai.choose_move(&*current_game.game)
         else { continue };
 
         game_events.write(GameEvent::ClickSquare { row: mov.row, col: mov.col });

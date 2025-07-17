@@ -4,9 +4,9 @@ use std::thread;
 use std::time::SystemTime;
 
 use othello_ai::{AI, evaluate_immediate, AlphaBetaAI, RandomAI};
-use othello_game::{Colour, DefaultGame, Game};
+use othello_game::{Colour, DefaultGame, GameRepr};
 
-fn simulate_one_game(black_ai: impl AI, white_ai: impl AI) -> Game {
+fn simulate_one_game(black_ai: impl AI, white_ai: impl AI) -> GameRepr {
     let mut game = DefaultGame::new();
     // println!("Game: {:?}", &othello_game);
 

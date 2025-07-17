@@ -1,5 +1,6 @@
 use crate::{AI, evaluate_immediate, pick_best_move, Score};
-use othello_game::{Board, Colour, Game, Move};
+use othello_game::{convert, Board, Colour, Game, GameRepr, Move};
+use othello_game::bitboardgame::BitBoardBoard;
 
 #[derive(Clone)]
 pub struct AlphaBetaAI {
@@ -7,17 +8,18 @@ pub struct AlphaBetaAI {
 }
 
 impl AI for AlphaBetaAI {
-    fn choose_move<B: Board>(&self, game: &Game<B>) -> Option<Move> {
-        pick_best_move(game, |g, m| evaluate_to_depth(
+    fn choose_move(&self, game: &dyn Game) -> Option<Move> {
+        let game: GameRepr<BitBoardBoard> = convert(game);
+        pick_best_move(&game, |g, m| evaluate_to_depth(
             &g.apply(m),
-            game.next_turn,
+            game.next_turn(),
             -1_000_000,
             1_000_000,
             self.max_depth))
     }
 }
 
-fn evaluate_to_depth<B: Board>(game: &Game<B>, player: Colour, mut alpha: Score, beta: Score, depth: usize) -> Score {
+fn evaluate_to_depth<B: Board>(game: &GameRepr<B>, player: Colour, mut alpha: Score, beta: Score, depth: usize) -> Score {
     if depth == 0 {
         evaluate_immediate(game, player)
     } else {
