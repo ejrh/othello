@@ -1,8 +1,7 @@
 use bevy::app::{App, Plugin, Startup};
 use bevy::asset::{AssetServer, Assets, Handle};
 use bevy::color::Color;
-use bevy::color::palettes::basic::{BLACK, WHITE};
-use bevy::color::palettes::css::{GOLD, LIMEGREEN};
+use bevy::color::palettes::css::{BLACK, GOLD, GREY, LIMEGREEN, WHITE};
 use bevy::prelude::{Camera2d, ColorMaterial, Commands, Component, Font, OrthographicProjection, Projection, Res, ResMut, Resource};
 use bevy::render::camera::ScalingMode;
 
@@ -27,6 +26,7 @@ pub struct Theme {
     pub gold: Color,
     pub black: Color,
     pub white: Color,
+    pub grey: Color,
     pub black_material: Handle<ColorMaterial>,
     pub white_material: Handle<ColorMaterial>,
 }
@@ -57,6 +57,7 @@ pub(crate) fn setup_theme(
     theme.gold = GOLD.into();
     theme.black = BLACK.into();
     theme.white = WHITE.into();
+    theme.grey = GREY.into();
 
     theme.black_material = materials.add(ColorMaterial::from(theme.black));
     theme.white_material = materials.add(ColorMaterial::from(theme.white));
