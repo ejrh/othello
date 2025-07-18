@@ -161,12 +161,12 @@ fn setup_righthand_info(
     const AI_INFO_TOP: f32 = 400.0;
 
     commands.spawn((
-        Sprite::from_color(theme.green, Vec2::new(CHAT_WIDTH, CHAT_HEIGHT)),
+        Sprite::from_color(theme.grey, Vec2::new(CHAT_WIDTH, CHAT_HEIGHT)),
         Transform::from_xyz(CHAT_LEFT + CHAT_WIDTH/2.0, AI_INFO_TOP - CHAT_HEIGHT/2.0, 0.0),
     )).with_child((
         AIInfoLabel,
         Text2d::new("ai"),
-        TextFont::from_font(theme.font.clone()).with_font_size(30.0),
+        TextFont::from_font(theme.font.clone()).with_font_size(24.0),
         TextColor::from(theme.white),
         Anchor::TopLeft,
         TextBounds::new(CHAT_WIDTH, CHAT_HEIGHT),

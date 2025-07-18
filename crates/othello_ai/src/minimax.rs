@@ -19,15 +19,20 @@ impl MinimaxAI {
 impl AI for MinimaxAI {
     fn choose_move(&self, game: &dyn Game) -> Option<Move> {
         let game: GameRepr<BitBoardBoard> = convert(game);
-        pick_best_move(&game, |g, m| evaluate_to_depth(
+        let num_choices = game.valid_moves(game.next_turn).len();
+        self.info.begin_search(num_choices);
+        let mov = pick_best_move(&game, |g, m| evaluate_to_depth(
             &g.apply(m),
             game.next_turn,
             self.max_depth,
-            &self.info))
+            &self.info));
+        self.info.finish_search();
+        mov
     }
 
-    fn info(&self) -> Option<&AIInfo> {
-        Some(&self.info)
+    fn info(&self) -> Option<AIInfo> {
+        let info = self.info.clone();
+        Some(info)
     }
 }
 

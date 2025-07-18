@@ -1,4 +1,3 @@
-use std::sync::atomic::Ordering;
 use bevy::app::{App, Plugin, Update};
 use bevy::log::info;
 use bevy::prelude::{Component, EventReader, EventWriter, Query, ResMut, Single, Text2d, With};
@@ -93,7 +92,14 @@ fn update_ai_info(
         else { continue };
         let Some(info) = ai.info()
         else { continue };
-        ai_text.0 = format!("AI Info:\n\
-        Nodes Searched: {}\n", info.nodes_searched.load(Ordering::Relaxed));
+        ai_text.0 = format!(
+            "AI Info:\n\
+            Total Nodes: {}\n\
+            Last Nodes: {}\n\
+            Last Choices: {}\n",
+            info.total_nodes_searched.get(),
+            info.last_nodes_searched.get(),
+            info.last_num_choices.get(),
+        );
     }
 }

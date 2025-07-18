@@ -3,7 +3,7 @@ mod immediate;
 pub mod minimax;
 mod random;
 
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::cell::Cell;
 use othello_game::{Board, Colour, Game, GameRepr, Move, Score};
 
 pub use alphabeta::AlphaBetaAI;
@@ -37,22 +37,30 @@ where F: Fn(&GameRepr<B>, Move) -> Score {
 
 pub trait AI: Clone + Send {
     fn choose_move(&self, game: &dyn Game) -> Option<Move>;
-    fn info(&self) -> Option<&AIInfo> { None }
+    fn info(&self) -> Option<AIInfo> { None }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct AIInfo {
-    pub nodes_searched: AtomicUsize,
+    pub total_nodes_searched: Cell<usize>,
+    pub last_nodes_searched: Cell<usize>,
+    pub last_num_choices: Cell<usize>,
 }
+
+unsafe impl Send for AIInfo {}
+unsafe impl Sync for AIInfo {}
 
 impl AIInfo {
     fn add_node(&self) {
-        self.nodes_searched.fetch_add(1, Ordering::Relaxed);
+        self.last_nodes_searched.update(|x| x + 1);
     }
-}
 
-impl Clone for AIInfo {
-    fn clone(&self) -> Self {
-        Self::default()
+    fn begin_search(&self, num_choices: usize) {
+        self.last_num_choices.set(num_choices);
+        self.last_nodes_searched.set(0);
+    }
+
+    fn finish_search(&self) {
+        self.total_nodes_searched.update(|x| x + self.last_nodes_searched.get());
     }
 }
