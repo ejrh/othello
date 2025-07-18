@@ -1,177 +1,33 @@
-use std::sync::mpsc::{channel, Receiver, Sender};
-use std::sync::{Arc, Mutex};
-use std::sync::atomic::Ordering;
-
-use bevy::color::palettes::css::{BLACK, GOLD, GRAY, GREEN, LIMEGREEN, WHITE};
 use bevy::input::touch::TouchPhase;
 use bevy::prelude::*;
-use bevy::render::batching::gpu_preprocessing::{GpuPreprocessingMode, GpuPreprocessingSupport};
-use bevy::render::camera::ScalingMode;
 use bevy::render::view::NoFrustumCulling;
 use bevy::sprite::Anchor;
 use bevy::text::TextBounds;
-use bevy::time::Stopwatch;
 
-use othello_ai::{AI, MinimaxAI, RandomAI};
-use othello_game::{Colour, DefaultGame, Game, Move, Pos};
+use othello_game::Colour;
+
+use crate::computer::AIPlugin;
+use crate::game::{setup_players, BoardSquare, Chat, CurrentGame, GameEvent, GamePlugin, PlacedDisc};
+use crate::rendering::{AIInfoLabel, CurrentSquare, RenderingPlugin, ScoreLabel, Theme, TimeLabel, setup_theme};
+
+mod computer;
+mod game;
+mod utils;
+mod rendering;
 
 fn main() {
     App::new()
-        .insert_resource(GpuPreprocessingSupport { max_supported_mode: GpuPreprocessingMode::None })
         .add_plugins(DefaultPlugins)
-        .add_systems(Startup, (setup_theme, setup_camera, setup_players, setup_board, setup_lefthand_info, setup_righthand_info).chain())
-        .add_systems(Update, (update_pieces, update_score, update_time))
+        .add_systems(Startup, (setup_board, setup_lefthand_info, setup_righthand_info).after(setup_theme).after(setup_players))
+        .add_systems(Update, update_pieces)
         .add_systems(Update, (collect_game_inputs, collect_board_inputs))
-        .add_systems(Update, (update_current_square, handle_game_events))
-        .add_systems(Update, (update_ai, update_chat, update_ai_info))
-        .add_systems(Update, close_on_esc)
-        .init_resource::<Theme>()
-        .init_resource::<CurrentGame>()
-        .init_resource::<CurrentSquare>()
-        .add_event::<GameEvent>()
+        .add_systems(Update, update_current_square)
+        .add_systems(Update, update_chat)
+        .add_plugins(GamePlugin)
+        .add_plugins(AIPlugin)
+        .add_plugins(RenderingPlugin)
+        .add_systems(Update, utils::close_on_esc)
         .run();
-}
-
-#[derive(Resource)]
-struct CurrentGame {
-    game: Box<dyn Game + Send + Sync>,
-    over: bool,
-}
-
-#[derive(Clone)]
-enum AIType {
-    RandomAI(RandomAI),
-    MinimaxAI(MinimaxAI)
-}
-
-impl AIType {
-    fn choose_move(&self, game: &dyn Game) -> Option<Move> {
-        match self {
-            AIType::RandomAI(ai) => ai.choose_move(game),
-            AIType::MinimaxAI(ai) => ai.choose_move(game),
-        }
-    }
-}
-
-#[derive(Component)]
-struct Player {
-    colour: Colour,
-    name: String,
-    ai: Option<AIType>,
-    sender: Sender<String>,
-    player_time: Stopwatch,
-}
-
-impl Default for CurrentGame {
-    fn default() -> Self {
-        CurrentGame {
-            game: Box::new(DefaultGame::new()),
-            over: false,
-        }
-    }
-}
-
-#[derive(Default, Resource)]
-struct Theme {
-    font: Handle<Font>,
-    green: Color,
-    gold: Color,
-    black: Color,
-    white: Color,
-    black_material: Handle<ColorMaterial>,
-    white_material: Handle<ColorMaterial>,
-}
-
-#[derive(Component)]
-struct BoardSquare {
-    row: Pos,
-    col: Pos
-}
-
-#[derive(Component)]
-struct PlacedDisc {
-    row: Pos,
-    col: Pos
-}
-
-#[derive(Default, Resource)]
-struct CurrentSquare {
-    row: Pos,
-    col: Pos
-}
-
-#[derive(Component)]
-struct ScoreLabel(Colour);
-
-#[derive(Component)]
-struct TimeLabel(Colour);
-
-#[derive(Component)]
-struct Chat {
-    receiver: Arc<Mutex<Receiver<String>>>,
-    messages: Vec<String>,
-}
-
-#[derive(Event)]
-enum GameEvent {
-    NewGame,
-    ClickSquare { row: Pos, col: Pos }
-}
-
-#[derive(Component)]
-struct AIInfoLabel;
-
-fn setup_camera(
-    mut commands: Commands,
-) {
-    let camera = Camera2d;
-    let mut proj = OrthographicProjection::default_2d();
-    proj.scaling_mode = ScalingMode::FixedVertical { viewport_height: 1000.0 };
-    commands.spawn((camera, Projection::Orthographic(proj)));
-}
-
-fn setup_theme(
-    mut theme: ResMut<Theme>,
-    asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
-    theme.font = asset_server.load("fonts/FiraMono-Medium.ttf");
-
-    theme.green = LIMEGREEN.into();
-    theme.gold = GOLD.into();
-    theme.black = BLACK.into();
-    theme.white = WHITE.into();
-
-    theme.black_material = materials.add(ColorMaterial::from(theme.black));
-    theme.white_material = materials.add(ColorMaterial::from(theme.white));
-}
-
-fn setup_players(
-    mut commands: Commands,
-) {
-    let (sender, receiver) = channel();
-
-    commands.spawn(Player {
-        colour: Colour::Black,
-        name: "Computer".to_string(),
-        ai: Some(AIType::MinimaxAI(MinimaxAI::new(6))),
-        sender: sender.clone(),
-        player_time: Stopwatch::new(),
-    });
-
-    commands.spawn(Player {
-        colour: Colour::White,
-        name: "Human".to_string(),
-        ai: None,
-        sender: sender.clone(),
-        player_time: Stopwatch::new(),
-    });
-
-    let chat = Chat {
-        receiver: Arc::new(Mutex::new(receiver)),
-        messages: Vec::new()
-    };
-    commands.spawn(chat);
 }
 
 fn setup_board(
@@ -198,7 +54,7 @@ fn setup_board(
 
             commands.spawn((
                 BoardSquare { row, col },
-                Sprite::from_color(LIMEGREEN, Vec2::new(TILE_SIZE, TILE_SIZE)),
+                Sprite::from_color(theme.green, Vec2::new(TILE_SIZE, TILE_SIZE)),
                 Transform::from_translation(Vec3::new(xp, yp, 0.)),
             ));
 
@@ -219,7 +75,7 @@ fn setup_lefthand_info(
     commands.spawn((
         Text2d::new("OTHELLO"),
         TextFont::from_font(theme.font.clone()).with_font_size(60.0),
-        TextColor::from(GOLD),
+        TextColor::from(theme.gold),
         Transform::from_xyz(-500.0, 20.0, 0.0),
     ));
 
@@ -229,7 +85,7 @@ fn setup_lefthand_info(
     commands.spawn((
         Text2d::new(version_str),
         TextFont::from_font(theme.font.clone()).with_font_size(20.0),
-        TextColor::from(GOLD),
+        TextColor::from(theme.gold),
         Transform::from_xyz(-500.0, -20.0, 0.0),
     ));
 
@@ -237,7 +93,7 @@ fn setup_lefthand_info(
         ScoreLabel(Colour::Black),
         Text2d::new("black"),
         TextFont::from_font(theme.font.clone()).with_font_size(40.0),
-        TextColor::from(BLACK),
+        TextColor::from(theme.black),
         Transform::from_xyz(-500.0, 100.0, 0.0),
     ));
 
@@ -245,7 +101,7 @@ fn setup_lefthand_info(
         ScoreLabel(Colour::White),
         Text2d::new("white"),
         TextFont::from_font(theme.font.clone()).with_font_size(40.0),
-        TextColor::from(WHITE),
+        TextColor::from(theme.white),
         Transform::from_xyz(-500.0, -100.0, 0.0),
     ));
 
@@ -253,7 +109,7 @@ fn setup_lefthand_info(
         TimeLabel(Colour::Black),
         Text2d::new("black time"),
         TextFont::from_font(theme.font.clone()).with_font_size(30.0),
-        TextColor::from(BLACK),
+        TextColor::from(theme.black),
         Transform::from_xyz(-500.0, 150.0, 0.0),
     ));
 
@@ -261,7 +117,7 @@ fn setup_lefthand_info(
         TimeLabel(Colour::White),
         Text2d::new("white time"),
         TextFont::from_font(theme.font.clone()).with_font_size(30.0),
-        TextColor::from(WHITE),
+        TextColor::from(theme.white),
         Transform::from_xyz(-500.0, -150.0, 0.0),
     ));
 }
@@ -279,7 +135,7 @@ fn setup_righthand_info(
     commands.entity(*chat_id).insert((
         Text2d::default(),
         TextFont::from_font(theme.font.clone()).with_font_size(30.0),
-        TextColor::from(WHITE),
+        TextColor::from(theme.white),
         Anchor::TopLeft,
         TextBounds::new(CHAT_WIDTH, CHAT_HEIGHT),
         Transform::from_xyz(CHAT_LEFT, CHAT_TOP, 0.0),
@@ -288,12 +144,12 @@ fn setup_righthand_info(
         parent.spawn((
             TextSpan::new("chat1"),
             TextFont::from_font(theme.font.clone()).with_font_size(30.0),
-            TextColor::from(GRAY)
+            TextColor::from(theme.grey)
         ));
         parent.spawn((
             TextSpan::new("chat2"),
             TextFont::from_font(theme.font.clone()).with_font_size(30.0),
-            TextColor::from(WHITE)
+            TextColor::from(theme.white)
         ));
     });
 
@@ -305,13 +161,13 @@ fn setup_righthand_info(
     const AI_INFO_TOP: f32 = 400.0;
 
     commands.spawn((
-        Sprite::from_color(GREEN, Vec2::new(CHAT_WIDTH, CHAT_HEIGHT)),
+        Sprite::from_color(theme.green, Vec2::new(CHAT_WIDTH, CHAT_HEIGHT)),
         Transform::from_xyz(CHAT_LEFT + CHAT_WIDTH/2.0, AI_INFO_TOP - CHAT_HEIGHT/2.0, 0.0),
     )).with_child((
         AIInfoLabel,
         Text2d::new("ai"),
         TextFont::from_font(theme.font.clone()).with_font_size(30.0),
-        TextColor::from(WHITE),
+        TextColor::from(theme.white),
         Anchor::TopLeft,
         TextBounds::new(CHAT_WIDTH, CHAT_HEIGHT),
         Transform::from_xyz(-CHAT_WIDTH/2.0, CHAT_HEIGHT/2.0, 1.0),
@@ -338,49 +194,6 @@ fn update_pieces(
                 *vis = Visibility::Hidden;
             }
         }
-    }
-}
-
-fn update_score(
-    mut labels: Query<(&ScoreLabel, &mut Text2d)>,
-    current_game: Res<CurrentGame>,
-    players: Query<&Player>,
-) {
-    let scores = current_game.game.scores();
-
-    for (label, mut text) in labels.iter_mut() {
-        let Some(player) = players.iter()
-            .find(|p| p.colour == label.0)
-        else { continue };
-        let name = &player.name;
-        let score = match label.0 {
-            Colour::Black => scores.0,
-            Colour::White => scores.1,
-        };
-        text.0 = format!("{name}: {score}");
-    }
-}
-
-fn update_time(
-    mut labels: Query<(&TimeLabel, &mut Text2d)>,
-    mut players: Query<&mut Player>,
-    now: Res<Time<Real>>,
-) {
-    for (label, mut text) in labels.iter_mut() {
-        let Some(mut player) = players.iter_mut()
-            .find(|p| p.colour == label.0)
-        else { continue };
-
-        player.player_time.tick(now.delta());
-        let total_time = player.player_time.elapsed();
-
-        let ms = total_time.as_millis();
-        let ms = ms - total_time.as_secs() as u128 * 1000;
-        let secs = total_time.as_secs();
-        let mins = secs / 60;
-        let secs = secs - mins * 60;
-        let time_str = format!("{mins}:{secs:02}.{ms:03}");
-        text.0 = time_str;
     }
 }
 
@@ -458,93 +271,6 @@ fn update_current_square(
     }
 }
 
-fn handle_game_events(
-    mut click_events: EventReader<GameEvent>,
-    mut current_game: ResMut<CurrentGame>,
-    mut players: Query<&mut Player>,
-) {
-    for event in click_events.read() {
-        match event {
-            GameEvent::ClickSquare { row, col } => {
-                info!("clicked {row}, {col}");
-                if current_game.over {
-                    continue
-                }
-
-                for player in players.iter() {
-                    if player.colour != current_game.game.next_turn() {
-                        continue;
-                    }
-
-                    let mov = Move {
-                        player: player.colour,
-                        row: *row,
-                        col: *col,
-                    };
-                    if !current_game.game.is_valid_move(mov) {
-                        return;
-                    }
-                    current_game.game.apply_in_place(mov);
-
-                    player.sender.send(format!("{} moved: {}", player.name, mov))
-                        .unwrap_or_else(|e| error!("Failed to send message: {}", e));
-                }
-            },
-            GameEvent::NewGame => {
-                current_game.game = Box::new(DefaultGame::new());
-                current_game.over = false;
-                players.iter_mut().for_each(|mut p| p.player_time.reset());
-            }
-        }
-    }
-
-    /* Check if other player now can't go */
-    if !current_game.over {
-        for player in players.iter() {
-            if player.colour != current_game.game.next_turn() {
-                continue;
-            }
-
-            if current_game.game.valid_moves(player.colour).is_empty() {
-                player.sender.send(format!("{} can't go", player.name)).unwrap();
-                current_game.over = true;
-            }
-        }
-    }
-
-    /* Update players' stopwatches */
-    for mut player in players.iter_mut() {
-        if current_game.over || player.colour != current_game.game.next_turn() {
-            player.player_time.pause();
-        } else {
-            player.player_time.unpause();
-        }
-    }
-}
-
-fn update_ai(
-    current_game: ResMut<CurrentGame>,
-    players: Query<&Player>,
-    mut game_events: EventWriter<GameEvent>,
-) {
-    if current_game.over {
-        return
-    }
-
-    for player in players.iter() {
-        if player.colour != current_game.game.next_turn() {
-            continue;
-        }
-
-        let Some(ref ai) = player.ai else { return };
-
-        let Some(mov) = ai.choose_move(&*current_game.game)
-        else { continue };
-
-        game_events.write(GameEvent::ClickSquare { row: mov.row, col: mov.col });
-    }
-}
-
 fn update_chat(
     mut chat: Single<(Entity, &mut Chat)>,
     theme: Res<Theme>,
@@ -576,33 +302,7 @@ fn update_chat(
         commands.entity(*chat_id).with_child((
             TextSpan::new(msg),
             TextFont::from_font(theme.font.clone()).with_font_size(30.0),
-            TextColor::from(GRAY)
+            TextColor::from(theme.grey)
         ));
-    }
-}
-
-fn update_ai_info(
-    game_events: EventReader<GameEvent>,
-    players: Query<&Player>,
-    mut ai_text: Single<&mut Text2d, With<AIInfoLabel>>
-) {
-    if game_events.is_empty() { return }
-
-    for player in players.iter() {
-        let Some(AIType::MinimaxAI(ai)) = &player.ai
-        else { continue };
-        let Some(info) = ai.info()
-        else { continue };
-        ai_text.0 = format!("AI Info:\n\
-        Nodes Searched: {}\n", info.nodes_searched.load(Ordering::Relaxed));
-    }
-}
-
-pub fn close_on_esc(
-    input: Res<ButtonInput<KeyCode>>,
-    mut app_exit_events: EventWriter<AppExit>,
-) {
-    if input.just_pressed(KeyCode::Escape) {
-        app_exit_events.write(AppExit::Success);
     }
 }
