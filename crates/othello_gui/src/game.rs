@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 
 use bevy::app::{App, Plugin, Startup, Update};
 use bevy::log::{error, info};
-use bevy::prelude::{Commands, Component, Event, EventReader, Query, Real, Res, ResMut, Resource, Text2d, Time};
+use bevy::prelude::{Commands, Component, Entity, Event, EventReader, Query, Real, Res, ResMut, Resource, Text2d, Time, With, Without};
 use bevy::time::Stopwatch;
 
 use othello_ai::MinimaxAI;
@@ -70,7 +70,8 @@ pub struct Chat {
 #[derive(Event)]
 pub enum GameEvent {
     NewGame,
-    ClickSquare { row: Pos, col: Pos }
+    MakeMove { mov: Move },
+    ClickSquare { row: Pos, col: Pos },
 }
 
 pub fn setup_players(
@@ -109,11 +110,17 @@ fn handle_game_events(
     mut click_events: EventReader<GameEvent>,
     mut current_game: ResMut<CurrentGame>,
     mut players: Query<&mut Player>,
+    humans: Query<Entity, (With<Player>, Without<Computer>)>,
+    mut commands: Commands,
 ) {
     for event in click_events.read() {
         match event {
-            GameEvent::ClickSquare { row, col } => {
-                info!("clicked {row}, {col}");
+            GameEvent::NewGame => {
+                current_game.game = Box::new(DefaultGame::new());
+                current_game.over = false;
+                players.iter_mut().for_each(|mut p| p.player_time.reset());
+            }
+            GameEvent::MakeMove { mov } => {
                 if current_game.over {
                     continue
                 }
@@ -123,24 +130,28 @@ fn handle_game_events(
                         continue;
                     }
 
-                    let mov = Move {
-                        player: player.colour,
-                        row: *row,
-                        col: *col,
-                    };
-                    if !current_game.game.is_valid_move(mov) {
+                    if !current_game.game.is_valid_move(*mov) {
                         return;
                     }
-                    current_game.game.apply_in_place(mov);
+                    current_game.game.apply_in_place(*mov);
 
                     player.sender.send(format!("{} moved: {}", player.name, mov))
                         .unwrap_or_else(|e| error!("Failed to send message: {}", e));
                 }
-            },
-            GameEvent::NewGame => {
-                current_game.game = Box::new(DefaultGame::new());
-                current_game.over = false;
-                players.iter_mut().for_each(|mut p| p.player_time.reset());
+            }
+            GameEvent::ClickSquare { row, col } => {
+                info!("Clicked {row}, {col}");
+
+                for id in humans.iter() {
+                    let Ok(player) = players.get(id)
+                    else { continue; };
+                    if player.colour != current_game.game.next_turn() {
+                        continue;
+                    }
+                    
+                    let mov = Move { player: player.colour, row: *row, col: *col };
+                    commands.send_event(GameEvent::MakeMove { mov });
+                }
             }
         }
     }

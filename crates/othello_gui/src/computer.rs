@@ -60,7 +60,7 @@ fn update_ai(
             if let Some((ai_back, maybe_mov)) = block_on(future::poll_once(task)) {
                 info!("AI task completed with: {maybe_mov:?}");
                 if let Some(mov) = maybe_mov {
-                    game_events.write(GameEvent::ClickSquare { row: mov.row, col: mov.col });
+                    game_events.write(GameEvent::MakeMove { mov });
                 }
                 computer.ai = ai_back;
                 computer.task = None;
