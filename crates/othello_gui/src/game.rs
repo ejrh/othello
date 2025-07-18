@@ -9,7 +9,7 @@ use bevy::time::Stopwatch;
 use othello_ai::MinimaxAI;
 use othello_game::{Colour, DefaultGame, Game, Move, Pos};
 
-use crate::computer::AIType;
+use crate::computer::{AIType, Computer};
 use crate::rendering::{ScoreLabel, TimeLabel};
 
 pub struct GamePlugin;
@@ -45,7 +45,6 @@ impl Default for CurrentGame {
 pub struct Player {
     pub colour: Colour,
     pub name: String,
-    pub ai: Option<AIType>,
     pub sender: Sender<String>,
     pub player_time: Stopwatch,
 }
@@ -79,18 +78,22 @@ pub fn setup_players(
 ) {
     let (sender, receiver) = channel();
 
-    commands.spawn(Player {
-        colour: Colour::Black,
-        name: "Computer".to_string(),
-        ai: Some(AIType::MinimaxAI(MinimaxAI::new(6))),
-        sender: sender.clone(),
-        player_time: Stopwatch::new(),
-    });
+    commands.spawn((
+        Player {
+            colour: Colour::Black,
+            name: "Computer".to_string(),
+            sender: sender.clone(),
+            player_time: Stopwatch::new(),
+        },
+        Computer {
+            ai: AIType::MinimaxAI(MinimaxAI::new(6)),
+            task: None,
+        }
+    ));
 
     commands.spawn(Player {
         colour: Colour::White,
         name: "Human".to_string(),
-        ai: None,
         sender: sender.clone(),
         player_time: Stopwatch::new(),
     });

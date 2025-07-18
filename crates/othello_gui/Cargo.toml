@@ -17,5 +17,6 @@ features = [
     "bevy_render",
     "bevy_text",
     "bevy_winit",
+    "multi_threaded",
     "webgl2"
 ]
